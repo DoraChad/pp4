@@ -1,3 +1,13 @@
+
+/* Custom font face */
+@font-face {
+     font-family: ForcedSquare;
+     src:
+          url("forced_square.woff2") format("woff2"),
+          url("forced_square.woff") format("woff"),
+          url("forced_square.ttf") format("truetype");
+}
+
 /* Settings menu styles */
 .settings-menu {
     position: absolute;
@@ -705,15 +715,7 @@
     display: none;
 }
 
-.menu .button-image {
-    display: inline-block;
-    margin: 10px 0;
-    padding: 0;
-    width: 200px;
-    height: 200px;
-    pointer-events: auto;
-    border-radius: 20px;
-}
+.menu .button-image {display: inline-block;margin: 10px 0;padding: 0;width: 200px;height: 200px;pointer-events: auto;}
 .menu .button-image::after {
     border-radius: 20px;
 }
@@ -2915,14 +2917,6 @@ button.nickname-verifier-button {
      --button-disabled-color: #313d53;
 }
 
-/* Custom font face */
-@font-face {
-     font-family: ForcedSquare;
-     src:
-          url("a82f15d48dbc61b6edeb.woff2") format("woff2"),
-          url("2e5b7bff10d7782e539c.woff") format("woff"),
-          url("4e75ed8189c5a7b6fbf8.ttf") format("truetype");
-}
 
 /* ===========================
     Base HTML & Body Styles
