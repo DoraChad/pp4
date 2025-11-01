@@ -2190,9 +2190,27 @@ class PP4UI {
 
 
     
-    RunTimer(element, sessionLengthMinutes=15, startHourUTC=21) {
-        let lastSession = null;
-        
+    RunTimer(element, sessionLengthMinutes = 15, startHourUTC = 21) {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+        }
+    
+        const now = new Date();
+    
+        const startOfDay = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate(),
+            startHourUTC, 0, 0, 0
+        ));
+    
+        if (now < startOfDay) {
+            startOfDay.setUTCDate(startOfDay.getUTCDate() - 1);
+        }
+    
+        const diffMinutes = (now - startOfDay) / 60000;
+        let lastSession = Math.floor(diffMinutes / sessionLengthMinutes);
+    
         const updateTimer = () => {
             const now = new Date();
     
@@ -2208,22 +2226,15 @@ class PP4UI {
             }
     
             const diffMinutes = (now - startOfDay) / 60000;
-    
             const currentSession = Math.floor(diffMinutes / sessionLengthMinutes);
     
             const nextSessionStart = new Date(startOfDay.getTime() + (currentSession + 1) * sessionLengthMinutes * 60000);
-    
             const remainingMs = nextSessionStart - now;
             const remainingMinutes = Math.floor(remainingMs / 60000);
             const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
-
-            if (remainingMinutes === 0 && remainingSeconds <= 30) {
-                element.style.color = "red";
-            } else {
-                element.style.color = "white";
-            };
-
-
+    
+            element.style.color = (remainingMinutes === 0 && remainingSeconds <= 30) ? "red" : "white";
+    
             if (currentSession !== lastSession) {
                 lastSession = currentSession;
                 if (this.serverTabs.length > 0) {
@@ -2233,13 +2244,21 @@ class PP4UI {
                 }
             }
     
-            element.textContent =
-                `${remainingMinutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+            element.textContent = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, "0")}`;
         };
     
         updateTimer();
-        setInterval(updateTimer, 1000);
+        this.timerInterval = setInterval(updateTimer, 1000);
     }
+    
+    RemoveHUD(ui) {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+        this.HUDtimer?.remove();
+    }
+
     
     CreateHUD(ui) {
         this.HUDtimer = document.createElement("div");
@@ -2253,8 +2272,11 @@ class PP4UI {
         this.RunTimer(this.serverTimer, 15);
     }
     RemoveHUD(ui) {
-        this.HUDtimer.remove();
-        multiplayerEnabled = false;
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+        this.HUDtimer?.remove();
     }
 }
 
@@ -36749,7 +36771,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             
                 set(this, Ok, !0, "f");
             
-                if (get(this, Fk, "f")) {
+                if (!get(this, Fk, "f")) {
                     this.refresh();
                 }
             
@@ -36761,7 +36783,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 //DORACHAD
                 
             
-                if (LE == "official") {
+                if (qk == "official") {
                     get(this, Tk, "f").classList.add("selected");
                     get(this, _k, "f").classList.remove("selected");
                     get(this, Ck, "f").classList.remove("selected");
@@ -36774,7 +36796,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             
                     get(this, Pk, "f").scrollTop = Xk;
                 } 
-                else if (LE == "community") {
+                else if (qk == "community") {
                     get(this, Tk, "f").classList.remove("selected");
                     get(this, _k, "f").classList.add("selected");
                     get(this, Ck, "f").classList.remove("selected");
@@ -36788,7 +36810,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, Ik, "f").scrollTop = Zk;
                 } 
 
-                else if (LE == "servers") {
+                else if (qk == "servers") {
                     get(this, Tk, "f").classList.remove("selected");
                     get(this, _k, "f").classList.remove("selected");
                     get(this, Ck, "f").classList.remove("selected");
@@ -40610,6 +40632,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         ;
         const V_ = class {
             constructor(e, t, n, i, r, a) {
+
+                pp4_exitTrackCallback = r;
+                
                 I_.add(this),
                 R_.set(this, void 0),
                 L_.set(this, void 0),
@@ -44816,7 +44841,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             const currentProfile = profileManager.getCurrentUserProfile();
             window.multiplayerClient.setTokens(currentProfile.token, currentProfile.tokenHash);
 
-            /* const playRankedButton = document.createElement("button"); // cwcinc - ranked button
+            const playRankedButton = document.createElement("button"); // cwcinc - ranked button
             playRankedButton.className = "button button-image ranked-button",
             playRankedButton.innerHTML = '<img src="images/trophy.svg">',
             playRankedButton.addEventListener("click", ( () => {
@@ -44836,8 +44861,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             const playRankedText = document.createElement("p");
             playRankedText.textContent = "Ranked";
             playRankedButton.appendChild(playRankedText);
-            get(this, nD, "f").appendChild(playRankedButton);
-            get(this, iD, "f").push(playRankedButton); */
+            //get(this, nD, "f").appendChild(playRankedButton);
+            //get(this, iD, "f").push(playRankedButton);
 
             if (window.electron) {
                 const e = document.createElement("button");
@@ -44887,9 +44912,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             t.textContent = "cwcinc + dorachad😛 - " + e.get("Version") + " " + modVersion,
             get(this, YL, "f").appendChild(t);
             const n = document.createElement("a");
-            n.href = "https://www.youtube.com/channel/UCzwh7qYbaZJZSSYHHrfhWZg",
+            n.href = "https://opengameart.org/content/sci-fi-theme-1",
             n.target = "_blank",
-            n.textContent = '"PolyRanked Theme" by cwcinc',
+            n.textContent = 'OpenGameArt.org "Sci-fi Theme" by Maou (CC-BY 4.0)',
             get(this, YL, "f").appendChild(n),
             get(this, YL, "f").appendChild(document.createElement("br"));
             const i = document.createElement("a");
