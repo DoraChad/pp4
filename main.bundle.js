@@ -940,6 +940,9 @@ class MultiplayerClient {
             case 'room_created':
                 this.currentRoom = data.room;
                 this.addSystemMessage(`Room ${data.roomId} created successfully!`);
+                // DORACHAD
+                PP4_ui.captureUsers(this.currentRoom.users);
+                //
                 this.fillLb();
                 break;
                 
@@ -947,6 +950,10 @@ class MultiplayerClient {
                 this.currentRoom = data.room;
                 this.addSystemMessage(`Joined room ${data.roomId}`);
 
+                // DORACHAD
+                PP4_ui.captureUsers(this.currentRoom.users);
+                //
+                
                 for (let user of this.currentRoom.users) {
                     if (user.id == this.userId) {continue;}
                     var colorString = user.carColors ? user.carColors : "000000000000000000000000"; // default black
@@ -964,6 +971,7 @@ class MultiplayerClient {
                 break;
                 
             case 'user_joined':
+
                 if (this.currentRoom) {
                     this.currentRoom = data.room;
                     this.addSystemMessage(`${data.userName} joined the room`);
@@ -979,11 +987,17 @@ class MultiplayerClient {
                     }
 
                     createNewMultiplayerCar(data.userId, colorString, carWrapId);
+                    // DORACHAD
+                    PP4_ui.captureUsers(this.currentRoom.users);
+                    //
                     this.fillLb();
                 }
                 break;
                 
             case 'user_left':
+                // DORACHAD
+                PP4_ui.captureUsers(this.currentRoom.users);
+                //
                 if (this.currentRoom) {
                     this.currentRoom = data.room;
                     this.addSystemMessage(`${data.userName} left the room`);
@@ -1033,6 +1047,9 @@ class MultiplayerClient {
             case 'new_pb':
                 if (this.currentRoom) {
                     this.currentRoom = data.room
+                    //DORACHAD
+                    PP4_ui.pbPopup(this.currentRoom.users);
+                    //
                     this.fillLb();
                 }
                 break;
@@ -1584,7 +1601,7 @@ class PP4_ServerCommunication {
 
 class PP4UI {
     constructor() {
-
+        this.serverPlayers = [];
         this.serverTabs = [];
         this.trackNames = {
             1: "Pointy Thing Jump",
@@ -1735,6 +1752,58 @@ class PP4UI {
 
         document.body.appendChild(div);
     }
+    captureUsers(users) {
+        console.log(users);
+        this.previousPlayers = users;
+    }
+    pbPopup(users) {
+
+        if (!this.previousPlayers) {
+            this.previousPlayers = JSON.parse(JSON.stringify(users));
+            return;
+        }
+        
+        for (const player of users) {
+            const oldData = this.previousPlayers.find(p => p.id === player.id);
+        
+            if (oldData) {
+                const oldPB = oldData.personalBest;
+                const newPB = player.personalBest;
+        
+                if (newPB != null && (oldPB == null || newPB < oldPB)) {
+                    console.log(`${player.name} set a new PB: ${newPB}`);
+                    this.pbAnnouncer(player.name, newPB);
+                }
+            }
+        }
+    
+        this.previousPlayers = JSON.parse(JSON.stringify(users));
+    }
+    pbAnnouncer(player, pb) {
+        const div = document.createElement("div");
+        div.style.color = "white";
+        div.style.fontSize = "25px";
+        div.style.display = "flex";
+        div.style.justifyContent = "center";
+        div.style.background = `
+            linear-gradient(
+                to right,
+                rgba(0, 0, 0, 0) 15%,
+                #112052a6 40%,
+                #112052a6 60%,
+                rgba(0, 0, 0, 0) 85%
+            )
+        `;
+
+
+        const text = document.createElement("p");
+        text.textContent = `${player} finished with a time of ${pb}!`;
+
+        div.appendChild(text);
+        
+        document.getElementById("ui").appendChild(div);
+        
+    }
     initInfoLogs() {
         const logDiv = document.createElement("div");
         logDiv.className = "info-log-container";
@@ -1788,12 +1857,14 @@ class PP4UI {
         
         PP4_main_container.appendChild(heading_text);
 
-        this.CreateServerEntry(this.getServerNumber(), "top");
-        this.CreateServerEntry(this.getServerNumber(8), "middle");
-        this.CreateServerEntry(this.getServerNumber(16), "bottom");
+        this.CreateServerEntry(0, "top");
+        this.CreateServerEntry(1, "middle");
+        this.CreateServerEntry(2, "bottom");
     }
     
-    async CreateServerEntry(trackNumber, styleType) {
+    CreateServerEntry(serverNumber, styleType) {
+        const trackNumber = this.getServerNumber(serverNumber * 8)
+        
         const div = document.createElement("div");
         div.className = "entry-div";
 
@@ -1806,12 +1877,12 @@ class PP4UI {
         entry.addEventListener("click", async () => {
 
             this.serverTabs = [];
+            this.userServerNumber = serverNumber;
             
             joiningServer = true;
             multiplayerEnabled = true;
             window.multiplayerClient.inRankedMatch = false;
             const code = await PP4_server.getTrackCode(trackNumber);
-            console.log(code);
             forceLoadTrackByCode(code);
         });
         
@@ -2191,6 +2262,10 @@ class PP4UI {
 
     
     RunTimer(element, sessionLengthMinutes = 15, startHourUTC = 21) {
+        if (this.timerElement) {
+            this.timerElement.remove();
+        }
+        this.timerElement = element;
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
         }
@@ -2211,7 +2286,7 @@ class PP4UI {
         const diffMinutes = (now - startOfDay) / 60000;
         let lastSession = Math.floor(diffMinutes / sessionLengthMinutes);
     
-        const updateTimer = () => {
+        const updateTimer = async () => {
             const now = new Date();
     
             const startOfDay = new Date(Date.UTC(
@@ -2241,6 +2316,15 @@ class PP4UI {
                     this.updateServerEntries();
                 } else {
                     pp4_exitTrackCallback();
+                    
+                    this.serverTabs = [];
+                    const trackNumber = this.getServerNumber(this.userServerNumber * 8)
+                    
+                    joiningServer = true;
+                    multiplayerEnabled = true;
+                    window.multiplayerClient.inRankedMatch = false;
+                    const code = await PP4_server.getTrackCode(trackNumber);
+                    forceLoadTrackByCode(code);
                 }
             }
     
@@ -40661,6 +40745,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 o.innerHTML = '<img class="button-icon" src="images/quit.svg"> ',
                 o.append(document.createTextNode(t.get("Exit"))),
                 o.addEventListener("click", ( () => {
+
                     e.playUIClick(),
                     r()
                 }
@@ -43648,7 +43733,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     A.width = trackPreviewCanvas.width,
                     A.height = trackPreviewCanvas.height;
                     const b = A.getContext("2d");
-                    null == b ? console.error("Failed to get 2D context for thumbnail canvas") : b.drawImage(h, 0, 0);
+                    null == b ? console.error("Failed to get 2D context for thumbnail canvas") : b.drawImage(trackPreviewCanvas, 0, 0);
                 };
                 //
                 const x = document.createElement("div");
@@ -53253,6 +53338,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                         }
                     }
                     ),( () => {
+                          //DORACHAD
+                        multiplayerEnabled = false;
+                        joiningServer = false;
+                          //
                         T(!0)
                     }
                     ),ejioajfioajef);
