@@ -1782,7 +1782,7 @@ class PP4UI {
     pbAnnouncer(player, pb) {
         const div = document.createElement("div");
         div.style.color = "white";
-        div.style.fontSize = "25px";
+        div.style.fontSize = "32px";
         div.style.display = "flex";
         div.style.justifyContent = "center";
         div.style.background = `
@@ -1794,6 +1794,8 @@ class PP4UI {
                 rgba(0, 0, 0, 0) 85%
             )
         `;
+        div.style.transition = "opacity 1s ease"; // smooth fade
+        div.style.opacity = "1";
 
 
         const text = document.createElement("p");
@@ -1802,6 +1804,14 @@ class PP4UI {
         div.appendChild(text);
         
         document.getElementById("ui").appendChild(div);
+
+        setTimeout(() => {
+            div.style.opacity = "0";
+    
+            setTimeout(() => {
+                div.remove();
+            }, 1000);
+        }, 5000);
         
     }
     initInfoLogs() {
