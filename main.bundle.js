@@ -53,7 +53,7 @@ var scriptedEditorDeleteBlock = (x, y, z, id, r, axis) => {};
 const mainTrackDataMap = new Map(); // [id, { metadata, trackData, thumbnail }]
 
 const carWrapArray = [
-    "images/wraps/default_stripe.webp", // 0
+    "images/wraps/default_stripe.png", // 0
     "images/wraps/pumpkin.webp", // 1
     "images/wraps/boggy.webp", // 2
     "images/wraps/polka.webp", // 3
@@ -30348,7 +30348,7 @@ PP4_ui.initInfoLogs();
                     set(this, hornColor, new Color(0,0,0), "f"),
                     set(this, carStripeId, carWrapId, "f"),
                     // get(this, AudioFunctions, "m", initCarStripeImage).call(this),   // default car stripe
-                    get(this, AudioFunctions, "m", setCustomCarStripeImage).call(this, carWrapMap.get(carWrapId) || "images/wraps/default_stripe.webp");
+                    get(this, AudioFunctions, "m", setCustomCarStripeImage).call(this, carWrapMap.get(carWrapId) || "images/wraps/default_stripe.png");
                     window.setCustomCarStripeImage = (e) => {   // cwcinc - allow custom car stripe from terminal
                         get(this, AudioFunctions, "m", setCustomCarStripeImage).call(this, e);
                     };
@@ -30675,7 +30675,7 @@ PP4_ui.initInfoLogs();
             }
             setCarStripeId(e) {
                 // console.log("Set car stripe ID:", e);
-                this.setCarStripeImage(carWrapMap.get(e) || "images/wraps/default_stripe.webp");
+                this.setCarStripeImage(carWrapMap.get(e) || "images/wraps/default_stripe.png");
                 set(this, carStripeId, e, "f");
             }
             getCarStripeId() {
@@ -30994,7 +30994,7 @@ PP4_ui.initInfoLogs();
                             t(new Error("Failed to load image"))
                         }
                         )),
-                        n.src = "images/wraps/default_stripe.webp",  // important - car stripe image
+                        n.src = "images/wraps/default_stripe.png",  // important - car stripe image
                         VisualCar3.images = {
                             stripe: n
                         }
