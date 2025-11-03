@@ -1564,6 +1564,7 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+let pp_User;
 let joiningServer = false;
 let PP4_SeverTab_button;
 let PP4_main_container;
@@ -1571,21 +1572,62 @@ let pp4_timer;
 let pp4_l;
 let pp4_exitTrackCallback = () => {};
 
-const targetDateTime = new Date("2025-11-16T20:00:00Z").getTime();
+let targetDateTime;
 
 class PP4_ServerCommunication {
     constructor(url) {
         this.url = url;
     }
+    async submitRun(playerData) {
+        await fetch(`${this.url}submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(playerData),
+        });
+    }
 
-    async checkConnection() {
+    async checkConnection(timeoutMs = 8000) {
+        const start = performance.now();
+        
         try {
-            const response = await fetch(this.url, { method: "HEAD" });
-            return response.ok;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        
+            const response = await fetch(this.url, { signal: controller.signal });
+            clearTimeout(timeout);
+        
+            if (!response.ok) {
+                // Non-200 response, e.g., 502 Bad Gateway
+                if (response.status === 502) {
+                    return { status: "waking", message: "Server is likely waking up" };
+                }
+                return { status: "error", code: response.status };
+            }
+        
+            // Server responded successfully
+            const data = await response.json();
+            targetDateTime = new Date(data.end).getTime();
+        
+            return { status: "online", data };
+        
         } catch (err) {
-            return false;
+            const duration = performance.now() - start;
+        
+            if (err.name === "AbortError") {
+                // Request timed out
+                return { status: "waking", message: "Server may be waking up" };
+            }
+        
+            if (duration < 2000) {
+                // Failed very quickly: probably down
+                return { status: "down", message: "Server unreachable" };
+            }
+        
+            // Failed after a few seconds: likely waking
+            return { status: "waking", message: "Server may be waking up" };
         }
     }
+
 
     async getTrackCode(trackNumber) {
         try {
@@ -1597,6 +1639,24 @@ class PP4_ServerCommunication {
             return null;
         }
     }
+
+    async fetchFullLeaderboard() {
+        try {
+            const response = await fetch(`${this.url}full-leaderboard`);
+    
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            // data.leaderboard is an array of players
+            return data.leaderboard;
+        } catch (err) {
+            console.error("Failed to fetch leaderboard:", err);
+            return [];
+        }
+    }
+
 }
 
 class PP4UI {
@@ -1967,8 +2027,111 @@ class PP4UI {
         updateCountdown();
         const interval = setInterval(updateCountdown, 1000);
     };
+
     
-    leaderboardUI() {
+    async getLBEntries(ct) {
+        ct.innerHTML = "";
+    
+        try {
+            const playerListArray = await PP4_server.fetchFullLeaderboard(); 
+    
+            playerListArray.forEach((player, index) => {
+                // per player
+                const lbc = document.createElement("div");
+                lbc.className = "playerSpot";
+                lbc.style.margin = "10px 10px 0 10px";
+                lbc.style.padding = "0";
+                lbc.style.verticalAlign = "top";
+                lbc.style.clipPath = "polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%)";
+                lbc.style.textAlign = "left";
+                lbc.style.whiteSpace = "nowrap";
+                lbc.style.height = "100px";
+                lbc.style.width = "calc(100% - 20px)";
+                lbc.style.backgroundColor = "#112052";
+                lbc.style.color = "white";
+                lbc.style.display = "flex";
+                lbc.style.alignItems = "center";
+                lbc.id = player.userId;
+    
+                // rank
+                const lft = document.createElement("div");
+                lft.className = "left";
+                lft.style.display = "flex";
+                lft.style.flexDirection = "column";
+                lft.style.justifyContent = "flex-end";
+    
+                const hh3 = document.createElement("p");
+                hh3.textContent = `${index + 1}.`;
+                hh3.style.padding = "15px";
+                hh3.style.fontSize = "32px";
+    
+                lft.appendChild(hh3);
+    
+                // name
+                const mdl = document.createElement("div");
+                mdl.className = "middle";
+                mdl.style.flex = "1 1 auto";
+                mdl.style.textOverflow = "ellipsis";
+                mdl.style.whiteSpace = "nowrap";
+                mdl.style.overflow = "hidden";
+    
+                const hh6 = document.createElement("p");
+                hh6.textContent = player.name;
+                hh6.style.padding = "15px";
+                hh6.style.fontSize = "50px";
+    
+                mdl.appendChild(hh6);
+    
+                // tracks and AP
+                const rgh = document.createElement("div");
+                rgh.className = "right";
+                rgh.style.display = "flex";
+                rgh.style.flexDirection = "column";
+                rgh.style.marginLeft = "auto";
+                rgh.style.padding = "5%";
+    
+                const hh4 = document.createElement("p");
+                hh4.textContent = `Completed: ${player.tracksCompleted}`;
+                hh4.style.padding = "10px";
+                hh4.style.fontSize = "25px";
+                hh4.style.margin = "0";
+    
+                const hh5 = document.createElement("p");
+                hh5.textContent = `Avg. Place: ${player.avgPlacement.toFixed(2)}`;
+                hh5.style.padding = "10px";
+                hh5.style.fontSize = "25px";
+                hh5.style.margin = "0";
+    
+                rgh.appendChild(hh4);
+                rgh.appendChild(hh5);
+    
+                lbc.appendChild(lft);
+                lbc.appendChild(mdl);
+                lbc.appendChild(rgh);
+                ct.appendChild(lbc);
+    
+                const clientElement = document.getElementById(pp_User.getCurrentUserProfile().tokenHash);
+                if (clientElement) {
+                    const clientRect = clientElement.getBoundingClientRect();
+                    const containerRect = ct.getBoundingClientRect();
+                    const offset = clientRect.top - containerRect.top + ct.scrollTop;
+                    ct.scrollTop = offset;
+                    clientElement.style.backgroundColor = "#2e4182";
+                }
+            });
+    
+        } catch (err) {
+            console.error(err);
+            const er = document.createElement("p");
+            er.textContent = "Leaderboards Failed. Try again later.";
+            er.style.fontSize = "32px";
+            er.style.padding = "0";
+            er.style.margin = "0";
+            ct.appendChild(er);
+        }
+    }
+
+    async leaderboardUI() {
         const main = document.getElementById("ui");
         
         const md = document.createElement("div");
@@ -2054,139 +2217,7 @@ class PP4UI {
         
         lc.appendChild(ls);
      
-         /* fetchLeaderboards()
-            .then(players => {
-        
-                    
-        
-              const playerListArray = Object.entries(players).map(([userId, data]) => {
-                  const avgPlacement = data.positions.reduce((a, b) => a + b, 0) / data.positions.length;
-                  return {
-                      userId, // include the userId in the object
-                      name: data.name,
-                      leaderboard_count: data.leaderboard_count,
-                      positions: data.positions,
-                      avgPlacement
-                  };
-              });
-              
-              playerListArray.sort((a, b) => {
-                  if (b.leaderboard_count !== a.leaderboard_count) {
-                      return b.leaderboard_count - a.leaderboard_count;
-                  }
-                  return a.avgPlacement - b.avgPlacement;
-              });
-        
-        
-        
-              ct.removeChild(lc);     
-        
-        
-        
-              playerListArray.forEach((player, index) => {
-                const lbc = document.createElement("div");
-                lbc.className = "playerSpot";
-                lbc.style.margin = "10px 10px 0 10px";
-                lbc.style.padding = "0";
-                lbc.style.verticalAlign = "top";
-                lbc.style.clipPath = "polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%)";
-                lbc.style.textAlign = "left";
-                lbc.style.whiteSpace = "nowrap";
-                lbc.style.height = "100px";
-                lbc.style.width = "calc(100% - 10px * 2)";
-                lbc.style.backgroundColor = "#112052";
-                lbc.style.color = "white";
-                lbc.style.display = "flex";
-                lbc.style.alignItems = "center";
-                lbc.id = player.userId;
-              
-                //hh3.textContent = `${index + 1}. ${player.name} — ${player.leaderboard_count} track${player.leaderboard_count !== 1 ? 's' : ''}, avg place: ${player.avgPlacement.toFixed(2)}`;
-        
-                const lft = document.createElement("div");
-                lft.className = "left";
-                lft.style.display = "flex";
-                lft.style.flexDirection = "column";
-                lft.style.justifyContent = "flex-end";
-        
-                const mdl = document.createElement("div");
-                mdl.style.display = "inline-block";
-                mdl.style.verticalAlign = "top";
-                mdl.className = "middle";
-                mdl.style.flex = "1 1 auto";
-                mdl.style.textOverflow = "ellipsis";
-                mdl.style.whiteSpace = "nowrap";
-                mdl.style.overflow = "hidden";
-        
-                const rgh = document.createElement("div");
-                rgh.style.display = "inline-block";
-                rgh.style.verticalAlign = "top";
-                rgh.className = "right";
-                rgh.style.display = "flex";
-                rgh.style.flexDirection = "column";
-                rgh.style.right = "0";
-                rgh.style.marginLeft = "auto";
-                rgh.style.padding = "5%";
-        
-                const hh3 = document.createElement("p");
-                
-                hh3.textContent = `${index + 1}.`;
-                hh3.style.padding = "15px";
-                hh3.style.fontSize = "32px";
-        
-                const hh4 = document.createElement("p");
-                
-                hh4.style.padding = "10px";
-                hh4.style.fontSize = "25px";
-                hh4.style.margin = "0";
-                hh4.textContent = `Completed: ${player.leaderboard_count}`
-        
-                const hh5 = document.createElement("p");
-                
-                hh5.style.padding = "10px";
-                hh5.style.fontSize = "25px";
-                hh5.style.margin = "0";
-                hh5.textContent = `Avg. Place: ${player.avgPlacement.toFixed(2)}`
-        
-                const hh6 = document.createElement("p");
-                
-                hh6.textContent = player.name;
-                hh6.style.padding = "15px";
-                hh6.style.fontSize = "50px";
-              
-                lft.appendChild(hh3);
-                rgh.appendChild(hh4);
-                rgh.appendChild(hh5);
-                mdl.appendChild(hh6);
-                lbc.appendChild(lft);
-                lbc.appendChild(mdl);
-                lbc.appendChild(rgh);
-                ct.appendChild(lbc);
-        
-                const clientElement = document.getElementById(pp4_user.getCurrentUserProfile().tokenHash);
-                if (clientElement) {
-                  const clientRect = clientElement.getBoundingClientRect();
-                  const containerRect = ct.getBoundingClientRect();
-                  
-                  const offset = clientRect.top - containerRect.top + ct.scrollTop;
-              
-                  ct.scrollTop = offset;
-                  clientElement.style.backgroundColor = "#2e4182";
-                };
-              });
-            })
-            .catch(err => {
-              ct.removeChild(lc);
-        
-              const er = document.createElement("p");
-                
-              er.textContent = "Leaderboards Failed. Try again later.";
-              er.style.fontSize = "32px";
-              er.style.padding = "0";
-              er.style.margin = "0";
-        
-              ct.appendChild(er);
-        
-            });*/
+        await this.getLBEntries(ct);
         
         
         const st = document.createElement("div");
@@ -2374,19 +2405,41 @@ class PP4UI {
     }
 }
 
-const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
+const PP4_server = new PP4_ServerCommunication("https://pp4-server.onrender.com/");
 const PP4_ui = new PP4UI();
 
 PP4_ui.initInfoLogs();
 
 (async () => {
-    const canConnect = await PP4_server.checkConnection();
-    if (!canConnect) {
-        PP4_ui.errorPopup("Your device could not connect to PP4 servers\n\nPlease check your internet connection. (The servers could also just be down)");
-    } else {
-        PP4_ui.log("Connected to Servers");
+    const result = await PP4_server.checkConnection();
+
+    switch (result.status) {
+        case "online":
+            PP4_ui.log("Connected to Servers");
+            break;
+        case "waking":
+            PP4_ui.errorPopup(
+                "The server is waking up…\n\nPlease wait and try again shortly."
+            );
+            break;
+        case "down":
+            PP4_ui.errorPopup(
+                "Your device could not connect to PP4 servers.\n\nPlease check your internet connection. The servers may also be down."
+            );
+            break;
+        case "error":
+            PP4_ui.errorPopup(
+                `Server returned an error (HTTP ${result.code}). Please try again later.`
+            );
+            break;
+        default:
+            PP4_ui.errorPopup(
+                "Unknown server status. Please try again later."
+            );
+            break;
     }
 })();
+
 
 
 ( () => {
@@ -44142,6 +44195,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         };
         class mL {
             constructor(e) {
+
+                pp_User = this;
+                
                 var t;
                 sL.add(this),
                 lL.set(this, void 0),
@@ -47802,6 +47858,26 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
+                
+                
+                //DORACHAD
+                if (joiningServer) {
+                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+                    
+                    const playerData = {
+                        replayCode: rawRecording,
+                        userId: userToken,
+                        name: username,
+                        carColors: carColors,
+                        frames: recordingTime,
+                        track: `track${trackNumber}`
+                    };
+                    
+                    
+                    PP4_server.submitRun(playerData);
+
+                }
+                //
                 return new Promise((resolve, reject) => {
                     if (this.determinismState != VI.Ok)
                         reject(new Error("Submit not allowed"));
