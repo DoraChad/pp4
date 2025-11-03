@@ -1578,27 +1578,6 @@ class PP4_ServerCommunication {
     constructor(url) {
         this.url = url;
     }
-    async pingServer() {
-        try {
-            const res = await fetch(this.url, { method: "HEAD" });
-            if (!res.ok) throw new Error("Ping failed");
-            console.log("Server ping successful");
-        } catch (err) {
-            console.warn("Server ping failed:", err);
-        }
-    }
-
-    startHeartbeat(intervalMinutes = 10) {
-        this.pingServer();
-
-        if (this.pingInterval) clearInterval(this.pingInterval);
-
-        this.pingInterval = setInterval(() => {
-            this.pingServer();
-        }, intervalMinutes * 60 * 1000);
-
-        console.log(`pinging server every ${intervalMinutes} minutes`);
-    }
     async submitRun(playerData) {
         try {
             const response = await fetch(`${this.url}submit`, {
@@ -2440,8 +2419,8 @@ class PP4UI {
         this.HUDtimer?.remove();
     }
 }
-
-const PP4_server = new PP4_ServerCommunication("https://pp4-server.onrender.com/");
+ht
+const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
 const PP4_ui = new PP4UI();
 
 PP4_ui.initInfoLogs();
