@@ -1579,12 +1579,27 @@ class PP4_ServerCommunication {
         this.url = url;
     }
     async submitRun(playerData) {
-        await fetch(`${this.url}submit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(playerData),
-        });
+        try {
+            const response = await fetch(`${this.url}submit`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(playerData),
+            });
+    
+            if (!response.ok) {
+                const text = await response.text();
+                console.error("Submit failed:", response.status, text);
+                throw new Error(`Submit failed with status ${response.status}`);
+            }
+    
+            const data = await response.json();
+            return data;
+        } catch (err) {
+            console.error("Network or server error:", err);
+            throw err;
+        }
     }
+
 
     async checkConnection(timeoutMs = 8000) {
         const start = performance.now();
@@ -1640,7 +1655,7 @@ class PP4_ServerCommunication {
         }
     }
 
-    async fetchFullLeaderboard() {
+    async fetchFullLeaderboard() {      
         try {
             const response = await fetch(`${this.url}full-leaderboard`);
     
