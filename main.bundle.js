@@ -2419,7 +2419,6 @@ class PP4UI {
         this.HUDtimer?.remove();
     }
 }
-ht
 const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
 const PP4_ui = new PP4UI();
 
