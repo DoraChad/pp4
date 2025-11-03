@@ -1578,6 +1578,27 @@ class PP4_ServerCommunication {
     constructor(url) {
         this.url = url;
     }
+    async pingServer() {
+        try {
+            const res = await fetch(this.url, { method: "HEAD" });
+            if (!res.ok) throw new Error("Ping failed");
+            console.log("Server ping successful");
+        } catch (err) {
+            console.warn("Server ping failed:", err);
+        }
+    }
+
+    startHeartbeat(intervalMinutes = 10) {
+        this.pingServer();
+
+        if (this.pingInterval) clearInterval(this.pingInterval);
+
+        this.pingInterval = setInterval(() => {
+            this.pingServer();
+        }, intervalMinutes * 60 * 1000);
+
+        console.log(`pinging server every ${intervalMinutes} minutes`);
+    }
     async submitRun(playerData) {
         try {
             const response = await fetch(`${this.url}submit`, {
