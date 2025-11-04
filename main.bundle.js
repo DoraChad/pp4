@@ -1579,6 +1579,7 @@ class PP4_ServerCommunication {
         this.url = url;
     }
     async submitRun(playerData) {
+        console.log(playerData)
         try {
             const response = await fetch(`${this.url}submit`, {
                 method: "POST",
@@ -1653,9 +1654,9 @@ class PP4_ServerCommunication {
             console.error(err);
             return null;
         }
-    }
+    };
 
-    async fetchFullLeaderboard() {      
+    async fetchFullLeaderboard() {  
         try {
             const response = await fetch(`${this.url}full-leaderboard`);
     
@@ -47872,17 +47873,26 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
-                
+                function serializeColor(color) {
+                    return { r: color.r, g: color.g, b: color.b };
+                }
                 
                 //DORACHAD
                 if (joiningServer) {
                     const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
                     
+                    const carColors = {
+                        primary: serializeColor(CarColors.primary),
+                        secondary: serializeColor(CarColors.secondary),
+                        frame: serializeColor(CarColors.frame),
+                        rims: serializeColor(CarColors.rims)
+                    };
+                    
                     const playerData = {
-                        replayCode: rawRecording,
+                        replayCode: rawRecording.serialize(),
                         userId: userToken,
                         name: username,
-                        carColors: carColors,
+                        carColors: JSON.stringify(carColors),
                         frames: recordingTime,
                         track: `track${trackNumber}`
                     };
