@@ -716,9 +716,7 @@
 }
 
 .menu .button-image {display: inline-block;margin: 10px 0;padding: 0;width: 200px;height: 200px;pointer-events: auto;}
-.menu .button-image::after {
-    border-radius: 20px;
-}
+
 
 .menu .button-image.ranked-button {
     background-color: rgb(158, 102, 0);
@@ -2904,7 +2902,6 @@ button.nickname-verifier-button {
     =========================== */
 :root {
      interpolate-size: allow-keywords;
-
      --text-color: #fff;
      --text-disabled-color: #5d6a7c;
      --surface-color: #28346a;
