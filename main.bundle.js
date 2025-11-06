@@ -1564,6 +1564,7 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+let hideOtherPlayersFlag = false;
 let pp_User;
 let joiningServer = false;
 let PP4_SeverTab_button;
@@ -35871,7 +35872,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             e[e.SpectatorSpeedModifier = 30] = "SpectatorSpeedModifier",
             e[e.VehicleHonkHorn = 31] = "VehicleHonkHorn",
             e[e.VehicleSpecial = 32] = "VehicleSpecial",
-            e[e.VehicleBackwardsCamera = 33] = "VehicleBackwardsCamera"
+            e[e.VehicleBackwardsCamera = 33] = "VehicleBackwardsCamera",
+            //DORACHAD keybinds
+            e[e.HidePlayers = 34] = "HidePlayers"
+            //
         }(Px || (Px = {}));
         const Ix = Px;
         var Rx = n(7687)
@@ -41839,6 +41843,12 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             }
                             e.preventDefault();
                         }
+                        //DORACHAD
+                        else if (c.checkKeyBinding(e, Ix.HidePlayers)) {
+                            hideOtherPlayersFlag = !hideOtherPlayersFlag;
+                            e.preventDefault();
+                        }
+                        //
                         else if (c.checkKeyBinding(e, Ix.ToggleUI))
                             set(this, zC, !get(this, zC, "f"), "f"),
                             get(this, carFunctions, "m", dP).call(this, get(this, zC, "f")),
@@ -42049,7 +42059,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                         const t = car.getPosition().distanceTo(get(this, primaryCar, "f").getPosition())
                         carOpacity = Math.max(0, Math.min(1, t / 5));
                     }
-                    if (carPaused) {
+                    if (hideOtherPlayersFlag) {
+                        car.setOpacity(0);
+                    }
+                    else if (carPaused) {
                         car.setOpacity(0.5 * carOpacity);
                     } else {
                         car.setOpacity(carOpacity);
@@ -42689,6 +42702,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             get(this, eI, "m", yI).call(this, get(this, nI, "f").get("Sound effect volume"), $o.SoundEffectVolume),
             get(this, eI, "m", yI).call(this, get(this, nI, "f").get("Music volume"), $o.MusicVolume),
             get(this, eI, "m", yI).call(this, get(this, nI, "f").get("Checkpoint volume"), $o.CheckpointVolume),
+            //DORACHAD keybinds
+            get(this, eI, "m", createSettingsHeader).call(this, get(this, nI, "f").get("Poliest Poly")),
+            get(this, eI, "m", AI).call(this, get(this, nI, "f").get("Hide Other Players"), Ix.HidePlayers),
+            //    
             get(this, eI, "m", createSettingsHeader).call(this, get(this, nI, "f").get("Controls")),
             get(this, eI, "m", vI).call(this, get(this, nI, "f").get("Vehicle")),
             get(this, eI, "m", AI).call(this, get(this, nI, "f").get("Accelerate"), Ix.VehicleAccelerate),
@@ -48128,6 +48145,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     [Ix.EditorTest, ["KeyT", null]], 
                     [Ix.EditorPick, ["KeyG", null]],
 
+                    //DORACHAD keybinds
+                    [Ix.HidePlayers, ["Backslash", null]], 
+                    //
+                    
                     [Ix.ToggleFpsCounter, ["Comma", null]], 
                     [Ix.ToggleSpectatorCamera, ["Period", null]], 
                     [Ix.SpectatorMoveForwards, ["KeyW", "ArrowUp"]], 
@@ -53128,10 +53149,13 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                         }
                         e.preventDefault()
                     }
-                    if (h.checkKeyBinding(e, Ix.ToggleUI) && (set(this, LO, !get(this, LO, "f"), "f"),
-                    get(this, fO, "m", HO).call(this, get(this, LO, "f")),
-                    e.preventDefault()),
-                    h.checkKeyBinding(e, Ix.ToggleSpectatorCamera)) {
+                    if (h.checkKeyBinding(e, Ix.ToggleUI)) {
+                    	set(this, LO, !get(this, LO, "f"), "f");
+                    	get(this, fO, "m", HO).call(this, get(this, LO, "f"));
+                    	e.preventDefault();
+                    }
+                    
+                    if (h.checkKeyBinding(e, Ix.ToggleSpectatorCamera)) {
                         console.log("Toggle Spectator Camera 3");
                         get(this, RO, "f").camera.position.copy(get(this, xO, "f").camera.position);
                         const t = new Euler(0,0,0,"YXZ").setFromQuaternion(get(this, xO, "f").camera.quaternion);
