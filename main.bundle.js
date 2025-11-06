@@ -1299,7 +1299,7 @@ class MultiplayerClient {
         
         this.send({
             type: 'join_room',
-            roomId: roomId,
+            roomId: roomId + "-pp4_CwcLookAtMeImAPoliestPolyRoom",
             name: this.username,
             publicToken: this.publicToken,
             privateToken: this.privateToken
@@ -1677,6 +1677,7 @@ class PP4_ServerCommunication {
 
 class PP4UI {
     constructor() {
+
         this.serverPlayers = [];
         this.serverTabs = [];
         this.trackNames = {
@@ -2289,9 +2290,9 @@ class PP4UI {
           }
         }
         
-        this.CreateServerEntry(this.getServerNumber(), "top");
-        this.CreateServerEntry(this.getServerNumber(8), "middle");
-        this.CreateServerEntry(this.getServerNumber(16), "bottom");    
+        this.CreateServerEntry(0, "top");
+        this.CreateServerEntry(1, "middle");
+        this.CreateServerEntry(2, "bottom");    
     }
     
     getServerNumber(offset = 0, sessionLengthMinutes = 15) {
