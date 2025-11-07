@@ -1,4 +1,4 @@
-const modVersion = "0.4.0 - PP4";
+const modVersion = "0.5.1 - PP4";
 
 const serverUpdateHz = 15;
 const serverUpdateMs = Math.round(1000 / serverUpdateHz);
@@ -1567,7 +1567,7 @@ function sendCarMultiplayerData(data, isPaused) {
 let hideOtherPlayersFlag = false;
 let pp_User;
 let joiningServer = false;
-let PP4_SeverTab_button;
+let PP4_ServerTab_button;
 let PP4_main_container;
 let pp4_timer;
 let pp4_l;
@@ -1600,6 +1600,28 @@ class PP4_ServerCommunication {
             throw err;
         }
     }
+    async submitStats(data) {
+        try {
+            const response = await fetch("https://polytrack.pythonanywhere.com/submit-stats", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
+    
+            if (!response.ok) {
+                const text = await response.text();
+                console.error("Submit failed:", text);
+                return;
+            }
+    
+            const result = await response.json();
+        } catch (err) {
+            console.error("Error submitting stats:", err);
+        }
+    }
+
 
 
     async checkConnection(timeoutMs = 8000) {
@@ -1673,6 +1695,40 @@ class PP4_ServerCommunication {
         }
     }
 
+}
+class playerStats {
+    constructor() {
+        this.startTime = null;
+        this.endTime = null;
+        this.numOfResets = 0;
+    }
+    startTiming() {
+        this.startTime = Date.now();
+        this.endTime = null;
+        this.numOfResets = 0;
+        console.log("Timer started");
+    }
+    stopTiming() {
+        if (!this.startTime) {
+            console.log("Timer not started");
+            return;
+        }
+        this.endTime = Date.now();
+        const ms = this.endTime - this.startTime;
+        const seconds = (ms / 1000).toFixed(3);
+        
+        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
+        const data = {
+            userId: window.multiplayerClient.publicToken,
+            track: `track${trackNumber}`,
+            playTime: Math.round(seconds),  
+            resets: this.numOfResets
+        }
+
+        console.log(data);
+        
+        PP4_server.submitStats(data)
+    }
 }
 
 class PP4UI {
@@ -1971,6 +2027,8 @@ class PP4UI {
             window.multiplayerClient.inRankedMatch = false;
             const code = await PP4_server.getTrackCode(trackNumber);
             forceLoadTrackByCode(code);
+
+            PP4_stats.startTiming();
         });
         
         if (styleType === "top") {
@@ -2393,15 +2451,6 @@ class PP4UI {
         this.timerInterval = setInterval(updateTimer, 1000);
     }
     
-    RemoveHUD(ui) {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
-        this.HUDtimer?.remove();
-    }
-
-    
     CreateHUD(ui) {
         this.HUDtimer = document.createElement("div");
         this.HUDtimer.className = "top-right-hud";
@@ -2423,6 +2472,7 @@ class PP4UI {
 }
 const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
 const PP4_ui = new PP4UI();
+const PP4_stats = new playerStats();
 
 PP4_ui.initInfoLogs();
 
@@ -36113,7 +36163,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
 
 
                 //DORACHAD
-                if (multiplayerEnabled) {
+                if (joiningServer) {
                     PP4_ui.CreateHUD(i);
                 };
                 //
@@ -36590,7 +36640,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, Tk, "f").classList.add("selected");
                 get(this, _k, "f").classList.remove("selected");
                 get(this, Ck, "f").classList.remove("selected");
-                PP4_SeverTab_button.classList.remove("selected");
+                PP4_ServerTab_button.classList.remove("selected");
 
                 PP4_main_container.classList.remove("open");
                 get(this, Pk, "f").classList.add("open");
@@ -36601,7 +36651,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, Tk, "f").classList.remove("selected");
                 get(this, _k, "f").classList.add("selected");
                 get(this, Ck, "f").classList.remove("selected");
-                PP4_SeverTab_button.classList.remove("selected");
+                PP4_ServerTab_button.classList.remove("selected");
 
                 PP4_main_container.classList.remove("open");
                 get(this, Pk, "f").classList.remove("open");
@@ -36612,7 +36662,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, Tk, "f").classList.remove("selected");
                 get(this, _k, "f").classList.remove("selected");
                 get(this, Ck, "f").classList.remove("selected");
-                PP4_SeverTab_button.classList.add("selected");
+                PP4_ServerTab_button.classList.add("selected");
 
                 PP4_main_container.classList.add("open");
                 get(this, Pk, "f").classList.remove("open");
@@ -36623,7 +36673,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, Tk, "f").classList.remove("selected");
                 get(this, _k, "f").classList.remove("selected");
                 get(this, Ck, "f").classList.add("selected");
-                PP4_SeverTab_button.classList.remove("selected");
+                PP4_ServerTab_button.classList.remove("selected");
 
                 PP4_main_container.classList.remove("open");
                 get(this, Pk, "f").classList.remove("open");
@@ -36762,27 +36812,29 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 u.appendChild(get(this, Ck, "f"));
                 const m = document.createElement("div");
                 m.className = "cover",
-                get(this, Ck, "f").prepend(m),
+                get(this, Ck, "f").prepend(m);
 
                 //DORACHAD
-                PP4_SeverTab_button = document.createElement("button");
-                PP4_SeverTab_button.className = "button servers";
-                PP4_SeverTab_button.append("Poliest Poly 4");
-                PP4_SeverTab_button.addEventListener("click", ( () => {
-                    get(this, wk, "f").playUIClick(),
-                    get(this, mk, "m", selectTrackTab).call(this, "servers")
+                if (!l) {
+                    PP4_ServerTab_button = document.createElement("button");
+                    PP4_ServerTab_button.className = "button servers";
+                    PP4_ServerTab_button.append("Poliest Poly 4");
+                    PP4_ServerTab_button.addEventListener("click", ( () => {
+                        get(this, wk, "f").playUIClick(),
+                        get(this, mk, "m", selectTrackTab).call(this, "servers")
+                    }
+                    ));
+                    u.appendChild(PP4_ServerTab_button);
+    
+                    const PP4_ServerTab = document.createElement("div");
+                    PP4_ServerTab.className = "cover";
+                    PP4_ServerTab_button.prepend(PP4_ServerTab);
+    
+                    PP4_main_container = document.createElement("div");
+                    PP4_main_container.className = "tracks-container";
+                    get(this, Mk, "f").appendChild(PP4_main_container);
+                    PP4_ui.CreatePP4Tab();
                 }
-                ));
-                u.appendChild(PP4_SeverTab_button);
-
-                const PP4_ServerTab = document.createElement("div");
-                PP4_ServerTab.className = "cover";
-                PP4_SeverTab_button.prepend(PP4_ServerTab);
-
-                PP4_main_container = document.createElement("div");
-                PP4_main_container.className = "tracks-container";
-                get(this, Mk, "f").appendChild(PP4_main_container);
-                PP4_ui.CreatePP4Tab();
                 //
 
                 set(this, Pk, document.createElement("div"), "f"),
@@ -36953,7 +37005,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, Tk, "f").classList.add("selected");
                     get(this, _k, "f").classList.remove("selected");
                     get(this, Ck, "f").classList.remove("selected");
-                    PP4_SeverTab_button.classList.remove("selected");
+                    PP4_ServerTab_button.classList.remove("selected");
 
                     PP4_main_container.classList.remove("open");
                     get(this, Pk, "f").classList.add("open");
@@ -36966,7 +37018,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, Tk, "f").classList.remove("selected");
                     get(this, _k, "f").classList.add("selected");
                     get(this, Ck, "f").classList.remove("selected");
-                    PP4_SeverTab_button.classList.remove("selected");
+                    PP4_ServerTab_button.classList.remove("selected");
 
                     PP4_main_container.classList.remove("open");
                     get(this, Pk, "f").classList.remove("open");
@@ -36980,7 +37032,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, Tk, "f").classList.remove("selected");
                     get(this, _k, "f").classList.remove("selected");
                     get(this, Ck, "f").classList.remove("selected");
-                    PP4_SeverTab_button.classList.add("selected");
+                    PP4_ServerTab_button.classList.add("selected");
 
                     PP4_main_container.classList.add("open");
                     get(this, Pk, "f").classList.remove("open");
@@ -36994,7 +37046,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, Tk, "f").classList.remove("selected");
                     get(this, _k, "f").classList.remove("selected");
                     get(this, Ck, "f").classList.add("selected");
-                    PP4_SeverTab_button.classList.remove("selected");
+                    PP4_ServerTab_button.classList.remove("selected");
 
                     PP4_main_container.classList.remove("open");
                     get(this, Pk, "f").classList.remove("open");
@@ -41219,6 +41271,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             if (window.multiplayerClient.inRankedMatch) {
                 return;
             }
+            //DORACHAD stats
+            PP4_stats.numOfResets += 1;
+            //
 
             var e;
             get(this, cP, "f") || ((null === (e = get(this, primaryCar, "f")) || void 0 === e ? void 0 : e.hasFinished()) ? (set(this, cP, !0, "f"),
@@ -41226,6 +41281,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, audioContext, "f").mute()
             }
             ), "game-finish-reset").finally(( () => {
+                
                 set(this, cP, !1, "f"),
                 get(this, audioContext, "f").unmute(),
                 get(this, carFunctions, "m", setupPrimaryCar).call(this),
@@ -43541,7 +43597,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             get(this, nR, "f").innerHTML = "",
             get(this, nR, "f").appendChild(get(this, iR, "f")),
             set(this, pR, null, "f");
-            /* setTimeout(( () => {
+             setTimeout(( () => {
                 if (!i.isCancelled) {
                     const n = 20
                       , r = get(this, hR, "f") * n;
@@ -43597,7 +43653,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     ))
                 }
             }
-            ), 500) */
+            ), 500)
         }
         ,
         gR = function(e, t, n, i, r, a, s, o) {
@@ -47945,18 +48001,18 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 return new Promise(( (i, r) => {
                     window.multiplayerClient.proxy.submitUserProfile(versionNumber, userToken, name, carColors.serialize(), hornColor, wrapId);
 
-                    // const a = mainApiUrl + "user"
-                    //   , s = encodeURIComponent("version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(name) + "&carColors=" + carColors.serialize())
-                    //   , o = new XMLHttpRequest;
-                    // o.timeout = VB(this, FB, "f"),
-                    // o.overrideMimeType("text/plain"),
-                    // o.onreadystatechange = () => {
-                    //     4 == o.readyState && (200 == o.status ? i() : r(new Error("Failed to connect to server, status: " + o.status.toString())))
+                     //const a = mainApiUrl + "user"
+                      // , s = encodeURIComponent("version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(name) + "&carColors=" + carColors.serialize())
+                     //  , o = new XMLHttpRequest;
+                     //o.timeout = VB(this, FB, "f"),
+                     //o.overrideMimeType("text/plain"),
+                     //o.onreadystatechange = () => {
+                     //    4 == o.readyState && (200 == o.status ? i() : r(new Error("Failed to connect to server, status: " + o.status.toString())))
                     // }
-                    // ,
-                    // o.open("POST", a, !0),
-                    // o.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
-                    // o.send(s)
+                     //,
+                     //o.open("POST", a, !0),
+                     //o.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
+                     //o.send(s)
                 }
                 ))
             }
@@ -53473,6 +53529,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                           //DORACHAD
                         multiplayerEnabled = false;
                         joiningServer = false;
+                        PP4_stats.stopTiming();
                           //
                         T(!0)
                     }
