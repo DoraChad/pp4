@@ -1564,6 +1564,10 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+
+let PP4_recordingClass;
+
+
 let hideOtherPlayersFlag = false;
 let pp_User;
 let joiningServer = false;
@@ -1731,6 +1735,48 @@ class playerStats {
     }
 }
 
+class clippingManager {
+    constructor() {
+        this.localKey = "pp4_clips";
+    }
+    createClip() {
+        if (!joiningServer) return;
+        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
+        const replayCode = PP4_recordingClass.getRecording().serialize()
+        console.log(replayCode, trackNumber);
+        this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, data: replayCode })
+        PP4_ui.log("Clip Saved");
+    }
+    localAdd(clip) {
+        const clips = JSON.parse(localStorage.getItem(this.localKey) || "[]");
+    
+        if (!clip.id) {
+            let i = 1;
+            let newId;
+            do {
+                newId = `Clip${i}`;
+                i++;
+            } while (clips.some(c => c.id === newId));
+            clip.id = newId;
+        }
+
+        if (!clips.some(c => c.id === clip.id)) {
+            clips.push(clip);
+            localStorage.setItem(this.localKey, JSON.stringify(clips));
+        }
+    }
+    
+    localDelete(id) {
+        const clips = JSON.parse(localStorage.getItem(this.localKey) || "[]");
+        const updated = clips.filter(c => c.id !== id);
+        localStorage.setItem(this.localKey, JSON.stringify(updated));
+    }
+    getAllClips() {
+        return JSON.parse(localStorage.getItem("pp4_clips") || "[]");
+    }
+}
+
+
 class PP4UI {
     constructor() {
 
@@ -1768,6 +1814,51 @@ class PP4UI {
         
         const styles = document.createElement("style");
         styles.textContent = `
+        .clip-menu-bg {
+            background: #28346a;
+            width: 70%;
+            height: 100%;
+            left: 10%;
+            position: relative;
+            color: white;
+            font-size: 32px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            text-align: left;
+            margin: 0;
+            padding: 0;
+        }
+        .clip-menu-bg > h2 {
+            text-align: center;
+        }
+        .clip-menu-container {
+            background: #212b58;
+            flex-grow: 1;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            pointer-events: auto;
+        }
+        .clip-menu-wrapper {
+            margin: 10px;
+        }
+        .clip-menu-entry {
+            margin: 10px 10px 0 10px;
+            padding: 10px 20px;
+            vertical-align: top;
+            width: calc(100% - 10px * 2);
+            height: 100px;
+            clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+            text-align: left;
+            white-space: nowrap;
+        }
+        .clip-menu-entry > h2 {
+            padding: 0 0 10px 0;
+            margin: 0;
+        }
+        .clip-menu-entry > p {
+            margin: 0;
+        }
         .server-entry {
             background-color: #112052;
             width: 90%;
@@ -2331,6 +2422,9 @@ class PP4UI {
             
             pp4_l.show();
         });
+
+        document.addEventListener("keydown", function esc(e){ if(e.key==="Escape"){ e.preventDefault(); const elements=document.getElementsByClassName("pp4leaderboard"); while(elements.length>0){ elements[0].parentNode.removeChild(elements[0]); } pp4_l.show(); this.removeEventListener("keydown", esc); } });
+
         
         bk.appendChild(pq);
         bk.appendChild(document.createTextNode("Back"));
@@ -2469,10 +2563,68 @@ class PP4UI {
         }
         this.HUDtimer?.remove();
     }
+
+    CreateClipsMenu(exitFunc) {
+        const ui = document.getElementById("ui");
+    
+        const background = document.createElement("div");
+        background.className = "clip-menu-bg"
+
+        const headText = document.createElement("h2");
+        headText.textContent = "Your Clips:";
+
+        const container = document.createElement("div");
+        container.className = "clip-menu-container";
+
+        const wrapper = document.createElement("div")
+        wrapper.className = "clip-menu-wrapper";
+        
+        const backButton = document.createElement("button");
+        backButton.className = "button";
+        backButton.innerHTML = '<img class="button-icon" src="images/back.svg"> ';
+        backButton.append("Back");
+        backButton.style.width = "150px";
+        backButton.addEventListener("click", () => {
+            background.remove();
+            exitFunc();
+        });
+
+
+        const createEntry = function(clipId, trackName, author) {
+            
+            const div = document.createElement("div");
+            div.className = "button clip-menu-entry";
+
+            const header = document.createElement("h2");
+            header.textContent = clipId;
+
+            const trackText = document.createElement("p");
+            trackText.textContent = trackName;
+
+            div.appendChild(header);
+            div.appendChild(trackText);
+            container.appendChild(div)
+        }
+        
+        const clipData = PP4_clipping.getAllClips();
+
+        clipData.forEach(e => {
+            createEntry(e.id, this.trackNames[e.track], e.author);
+        })
+        
+        
+        wrapper.appendChild(backButton);
+        background.appendChild(headText);
+        background.appendChild(container);
+        background.appendChild(wrapper);
+        ui.appendChild(background);
+    }
 }
+
 const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
 const PP4_ui = new PP4UI();
 const PP4_stats = new playerStats();
+const PP4_clipping = new clippingManager();
 
 PP4_ui.initInfoLogs();
 
@@ -30264,6 +30416,10 @@ PP4_ui.initInfoLogs();
         };
         class VisualCar {
             constructor(e, startTransform, n, i, r, a, s, o, l, carWrapId=0) {
+                
+                //DORACHAD clipping
+                PP4_recordingClass = this;
+                
                 var c;
                 if (AudioFunctions.add(this),
                 localAudioManager.set(this, void 0),
@@ -35925,7 +36081,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             e[e.VehicleSpecial = 32] = "VehicleSpecial",
             e[e.VehicleBackwardsCamera = 33] = "VehicleBackwardsCamera",
             //DORACHAD keybinds
-            e[e.HidePlayers = 34] = "HidePlayers"
+            e[e.HidePlayers = 34] = "HidePlayers";
+            e[e.ClipRun = 35] = "ClipRun"
             //
         }(Px || (Px = {}));
         const Ix = Px;
@@ -41905,6 +42062,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             hideOtherPlayersFlag = !hideOtherPlayersFlag;
                             e.preventDefault();
                         }
+                        else if (c.checkKeyBinding(e, Ix.ClipRun)) {
+                            PP4_clipping.createClip();
+                            e.preventDefault();
+                        }
                         //
                         else if (c.checkKeyBinding(e, Ix.ToggleUI))
                             set(this, zC, !get(this, zC, "f"), "f"),
@@ -42761,7 +42922,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             get(this, eI, "m", yI).call(this, get(this, nI, "f").get("Checkpoint volume"), $o.CheckpointVolume),
             //DORACHAD keybinds
             get(this, eI, "m", createSettingsHeader).call(this, get(this, nI, "f").get("Poliest Poly")),
-            get(this, eI, "m", AI).call(this, get(this, nI, "f").get("Hide Other Players"), Ix.HidePlayers),
+            get(this, eI, "m", AI).call(this, get(this, nI, "f").get("Hide other players"), Ix.HidePlayers),
+            get(this, eI, "m", AI).call(this, get(this, nI, "f").get("Clip a run"), Ix.ClipRun),
             //    
             get(this, eI, "m", createSettingsHeader).call(this, get(this, nI, "f").get("Controls")),
             get(this, eI, "m", vI).call(this, get(this, nI, "f").get("Vehicle")),
@@ -44867,6 +45029,32 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             for (const e of get(this, aD, "f"))
                 get(this, rD, "f").removeChild(e);
             set(this, aD, [], "f");
+
+
+            //DORACHAD clipping
+
+            const clipMenuButton = document.createElement("button");
+            clipMenuButton.className = "button button-image",
+            clipMenuButton.innerHTML = '<img src="images/preview.svg">',
+            clipMenuButton.addEventListener("click", ( () => {
+                audioCtx.playUIClick();
+                get(this, FL, "m", hideMainMenu).call(this);
+                get(this, FL, "m", hidePolytrackLogo).call(this);
+                PP4_ui.CreateClipsMenu(() => {
+                    get(this, FL, "m", showMainMenu).call(this),
+                    get(this, FL, "m", showPolytrackLogo).call(this)
+                })
+            }
+            ));
+            const clipButtonText = document.createElement("p");
+            clipButtonText.textContent = langObject.get("Clips"),
+            clipMenuButton.appendChild(clipButtonText),
+            get(this, nD, "f").appendChild(clipMenuButton),
+            get(this, iD, "f").push(clipMenuButton);
+
+            //
+
+            
             const v = document.createElement("button");
             v.className = "button button-image",
             v.innerHTML = '<img src="images/customize.svg">',
@@ -45148,7 +45336,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             const t = document.createElement("a");
             t.href = "https://www.kodub.com",
             t.target = "_blank",
-            t.textContent = "cwcinc + dorachad😛 - " + e.get("Version") + " " + modVersion,
+            t.textContent = "dorachad😛 + cwcinc - " + e.get("Version") + " " + modVersion,
             get(this, YL, "f").appendChild(t);
             const n = document.createElement("a");
             n.href = "https://opengameart.org/content/sci-fi-theme-1",
@@ -47797,105 +47985,88 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 FB.set(this, 2e4),
                 WB.set(this, 1e4)
             }
-            getLeaderboard(e, t, n, i, r) {
-                let a = mainApiUrl + "leaderboard?version=" + versionNumber + "&trackId=" + t + "&skip=" + n.toString() + "&amount=" + i.toString() + "&onlyVerified=" + r.toString();
-                return this.determinismState == VI.Ok && (a += "&userTokenHash=" + encodeURIComponent(e)),
-                new Promise(( (t, n) => {
-                    const i = new XMLHttpRequest;
-                    i.timeout = VB(this, FB, "f"),
-                    i.overrideMimeType("text/plain"),
-                    i.onreadystatechange = () => {
-                        if (i.readyState == XMLHttpRequest.DONE)
-                            if (200 == i.status)
-                                try {
-                                    const r = JSON.parse(i.responseText)
-                                      , a = r.total;
-                                    if ("number" != typeof a)
-                                        return void n(new Error("Total is not a number"));
-                                    if (!Number.isSafeInteger(a))
-                                        return void n(new Error("Total is not a safe integer"));
-                                    const s = r.entries;
-                                    if (!Array.isArray(s))
-                                        return void n(new Error("Entries is not an array"));
-                                    const o = [];
-                                    for (const t of s) {
-                                        if (null == t)
-                                            return void n(new Error("Entry is missing"));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "id"))
-                                            return void n(new Error('Entry is missing "id" field'));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "userId"))
-                                            return void n(new Error('Entry is missing "userId" field'));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "name"))
-                                            return void n(new Error('Entry is missing "name" field'));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "frames"))
-                                            return void n(new Error('Entry is missing "frames" field'));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "carColors"))
-                                            return void n(new Error('Entry is missing "carColors" field'));
-                                        if (!Object.prototype.hasOwnProperty.call(t, "verifiedState"))
-                                            return void n(new Error('Entry is missing "verifiedState" field'));
-                                        if ("number" != typeof t.id)
-                                            return void n(new Error('"id" field has incorrect type'));
-                                        if ("string" != typeof t.userId)
-                                            return void n(new Error('"userId" field has incorrect type'));
-                                        if ("string" != typeof t.name)
-                                            return void n(new Error('"name" field has incorrect type'));
-                                        if ("number" != typeof t.frames)
-                                            return void n(new Error('"frames" field has incorrect type'));
-                                        if (!Number.isSafeInteger(t.frames) || t.frames <= 0 || t.frames > Rv.maxFrames)
-                                            return void n(new Error('"frames" field has an invalid value'));
-                                        if ("string" != typeof t.carColors)
-                                            return void n(new Error('"carColors" field has incorrect type'));
-                                        if (!Number.isSafeInteger(t.verifiedState) || t.verifiedState < 0)
-                                            return void n(new Error('"verifiedState" field has an invalid value'));
-                                        o.push({
-                                            id: t.id,
-                                            name: t.name,
-                                            time: new Vp(t.frames),
-                                            carColors: tp.deserialize(t.carColors),
-                                            verifiedState: t.verifiedState,
-                                            isSelf: t.userId == e
-                                        })
-                                    }
-                                    let l = null;
-                                    if (null != r.userEntry) {
-                                        const e = r.userEntry.position;
-                                        if ("number" != typeof e)
-                                            return void n(new Error("User position is not a number"));
-                                        if (!Number.isSafeInteger(e))
-                                            return void n(new Error("User position is not a safe integer"));
-                                        const t = r.userEntry.frames;
-                                        if ("number" != typeof t)
-                                            return void n(new Error("User frames is not a number"));
-                                        if (!Number.isSafeInteger(t))
-                                            return void n(new Error("User frames is not a safe integer"));
-                                        const i = new Vp(t)
-                                          , a = r.userEntry.id;
-                                        if ("number" != typeof a)
-                                            return void n(new Error("User record id is not a number"));
-                                        if (!Number.isSafeInteger(a))
-                                            return void n(new Error("User record id is not a safe integer"));
-                                        l = {
-                                            position: e,
-                                            time: i,
-                                            id: a
-                                        }
-                                    }
-                                    t({
-                                        total: a,
-                                        entries: o,
-                                        userEntry: l
-                                    })
-                                } catch (e) {
-                                    n(new Error("Unknown error: " + String(e)))
-                                }
-                            else
-                                n(new Error("Failed to connect to server, status: " + i.status.toString()))
-                    }
-                    ,
-                    i.open("GET", a, !0),
-                    i.send()
-                }
-                ))
+            getLeaderboard(userId, trackId, skip, amount, onlyVerified) {
+                return new Promise((resolve, reject) => {
+                    window.multiplayerClient.proxy.getLeaderboard(versionNumber, userId, trackId, skip, amount, onlyVerified).then(leaderboardData => {
+                        // console.log("lbdata", leaderboardData);
+                        const a = leaderboardData.total;
+                        if ("number" != typeof a)
+                            return void reject(new Error("Total is not a number"));
+                        if (!Number.isSafeInteger(a))
+                            return void reject(new Error("Total is not a safe integer"));
+                        const s = leaderboardData.entries;
+                        if (!Array.isArray(s))
+                            return void reject(new Error("Entries is not an array"));
+                        const o = [];
+                        for (const t of s) {
+                            if (null == t)
+                                return void reject(new Error("Entry is missing"));
+                            if (!Object.prototype.hasOwnProperty.call(t, "id"))
+                                return void reject(new Error('Entry is missing "id" field'));
+                            if (!Object.prototype.hasOwnProperty.call(t, "userId"))
+                                return void reject(new Error('Entry is missing "userId" field'));
+                            if (!Object.prototype.hasOwnProperty.call(t, "name"))
+                                return void reject(new Error('Entry is missing "name" field'));
+                            if (!Object.prototype.hasOwnProperty.call(t, "frames"))
+                                return void reject(new Error('Entry is missing "frames" field'));
+                            if (!Object.prototype.hasOwnProperty.call(t, "carColors"))
+                                return void reject(new Error('Entry is missing "carColors" field'));
+                            if (!Object.prototype.hasOwnProperty.call(t, "verifiedState"))
+                                return void reject(new Error('Entry is missing "verifiedState" field'));
+                            if ("number" != typeof t.id)
+                                return void reject(new Error('"id" field has incorrect type'));
+                            if ("string" != typeof t.userId)
+                                return void reject(new Error('"userId" field has incorrect type'));
+                            if ("string" != typeof t.name)
+                                return void reject(new Error('"name" field has incorrect type'));
+                            if ("number" != typeof t.frames)
+                                return void reject(new Error('"frames" field has incorrect type'));
+                            if (!Number.isSafeInteger(t.frames) || t.frames <= 0 || t.frames > cv.maxFrames)
+                                return void reject(new Error('"frames" field has an invalid value'));
+                            if ("string" != typeof t.carColors)
+                                return void reject(new Error('"carColors" field has incorrect type'));
+                            if (!Number.isSafeInteger(t.verifiedState) || t.verifiedState < 0)
+                                return void reject(new Error('"verifiedState" field has an invalid value'));
+                            o.push({
+                                id: t.id,
+                                name: t.name,
+                                time: new TimeObject(t.frames),
+                                carColors: CarColors2.deserialize(t.carColors),
+                                verifiedState: t.verifiedState,
+                                isSelf: t.userId == userId
+                            });
+                        }
+                        let l = null;
+                        if (null != leaderboardData.userEntry) {
+                            const e = leaderboardData.userEntry.position;
+                            if ("number" != typeof e)
+                                return void reject(new Error("User position is not a number"));
+                            if (!Number.isSafeInteger(e))
+                                return void reject(new Error("User position is not a safe integer"));
+                            const t = leaderboardData.userEntry.frames;
+                            if ("number" != typeof t)
+                                return void reject(new Error("User frames is not a number"));
+                            if (!Number.isSafeInteger(t))
+                                return void reject(new Error("User frames is not a safe integer"));
+                            const i = new TimeObject(t)
+                                , a = leaderboardData.userEntry.id;
+                            if ("number" != typeof a)
+                                return void reject(new Error("User record id is not a number"));
+                            if (!Number.isSafeInteger(a))
+                                return void reject(new Error("User record id is not a safe integer"));
+                            l = {
+                                position: e,
+                                time: i,
+                                id: a
+                            }
+                        }
+                        resolve({
+                            total: a,
+                            entries: o,
+                            userEntry: l
+                        });
+                    });
+                });
             }
             getRecordings(recordingIds) {
                 return new Promise((resolve, reject) => {
@@ -47946,33 +48117,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
-                const serializeColor = function(color) {
-                    return { r: color.r, g: color.g, b: color.b };
-                }
-
-                //DORACHAD
-                if (joiningServer) {
-                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
-                    const submitColors = {
-                        primary: serializeColor(carColors.primary),
-                        secondary: serializeColor(carColors.secondary),
-                        frame: serializeColor(carColors.frame),
-                        rims: serializeColor(carColors.rims)
-                    };
-                    
-                    const playerData = {
-                        replayCode: rawRecording.serialize(),
-                        userId: userToken,
-                        name: username,
-                        carColors: JSON.stringify(submitColors),
-                        frames: recordingTime.numberOfFrames,
-                        track: `track${trackNumber}`
-                    };
-                    
-                    PP4_server.submitRun(playerData);
-
-                }
-                //
                 return new Promise((resolve, reject) => {
                     if (this.determinismState != VI.Ok)
                         reject(new Error("Submit not allowed"));
@@ -48001,18 +48145,18 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 return new Promise(( (i, r) => {
                     window.multiplayerClient.proxy.submitUserProfile(versionNumber, userToken, name, carColors.serialize(), hornColor, wrapId);
 
-                     //const a = mainApiUrl + "user"
-                      // , s = encodeURIComponent("version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(name) + "&carColors=" + carColors.serialize())
-                     //  , o = new XMLHttpRequest;
-                     //o.timeout = VB(this, FB, "f"),
-                     //o.overrideMimeType("text/plain"),
-                     //o.onreadystatechange = () => {
-                     //    4 == o.readyState && (200 == o.status ? i() : r(new Error("Failed to connect to server, status: " + o.status.toString())))
+                    // const a = mainApiUrl + "user"
+                    //   , s = encodeURIComponent("version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(name) + "&carColors=" + carColors.serialize())
+                    //   , o = new XMLHttpRequest;
+                    // o.timeout = VB(this, FB, "f"),
+                    // o.overrideMimeType("text/plain"),
+                    // o.onreadystatechange = () => {
+                    //     4 == o.readyState && (200 == o.status ? i() : r(new Error("Failed to connect to server, status: " + o.status.toString())))
                     // }
-                     //,
-                     //o.open("POST", a, !0),
-                     //o.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
-                     //o.send(s)
+                    // ,
+                    // o.open("POST", a, !0),
+                    // o.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
+                    // o.send(s)
                 }
                 ))
             }
@@ -48204,6 +48348,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
 
                     //DORACHAD keybinds
                     [Ix.HidePlayers, ["Backslash", null]], 
+                    [Ix.ClipRun, ["Equal", null]], 
                     //
                     
                     [Ix.ToggleFpsCounter, ["Comma", null]], 
