@@ -2738,6 +2738,10 @@ class PP4UI {
             trackText.textContent = trackName;
 
             div.addEventListener("click", async () => {
+
+                watchingClipFlag = true;
+                customCode = true;
+    
                 const code = await PP4_server.getTrackCode(trackNum);
                 background.remove();
                 forceLoadTrackByCode(code);
@@ -2746,9 +2750,6 @@ class PP4UI {
                     recording: replayData,
                     frames: frames
                 })
-
-                watchingClipFlag = true;
-                customCode = true;
                 
                 pp4_watchFunction([{
                     recording: processed.recording,
