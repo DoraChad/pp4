@@ -1718,12 +1718,18 @@ class PP4_ServerCommunication {
         try {
             const res = await fetch(`https://raw.githubusercontent.com/DoraChad/pp4/refs/heads/main/tracks/poliestpoly/${trackNumber}.txt`);
             if (!res.ok) throw new Error("Failed to fetch track code");
-            return await res.text();
+    
+            // Get raw bytes
+            const buffer = await res.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+    
+            return bytes; 
         } catch (err) {
             console.error(err);
             return null;
         }
-    };
+    }
+
 
     async fetchFullLeaderboard() {  
         try {
@@ -1833,32 +1839,33 @@ class PP4UI {
         this.serverPlayers = [];
         this.serverTabs = [];
         this.trackNames = {
-            1: "Pointy Thing Jump",
-            2: "The Wormhole",
-            3: "Sandy Cove",
-            4: "Zero-G: Protocol",
-            5: "__00-0912",
-            6: "perfection",
-            7: "Flippin' Time",
-            8: "Wayzz",
-            9: "Epilsepy Warning",
-            10: "Allure of the Red Amanita",
-            11: "Corner of The Storm",
-            12: "Clip-Flip",
-            13: "The Tomb",
-            14: "Tesseract: Infinity",
-            15: "The Caverns",
-            16: "Tightrope Travels",
-            17: "DownForce",
-            18: "Aerial Monument",
-            19: "Pain 3",
-            20: "Pinpoint Perfection",
-            21: "Ketamine",
-            22: "Sea Space",
-            23: "Noodle",
-            24: "fibonacci",
-            25: "needle 3"
+            1: "Bonk III - The Last Act",
+            2: "Primordial Soup",
+            3: "Ters",
+            4: "Tadpole",
+            5: "WICKED Flip 2",
+            6: "rest in beef",
+            7: "Royalll",
+            8: "FellowPurper=Stupid",
+            9: "toWer",
+            10: "Overwalls",
+            11: "Desolate Road",
+            12: "Float Like a Butterfly",
+            13: "a leap of faith",
+            14: "Drukkies",
+            15: "Lost In The Deep",
+            16: "2 Wheels, 2 Brain Cells",
+            17: "Crashing out in style!",
+            18: "Giraffirigian Kacky Edition",
+            19: "Pain 4",
+            20: "Skeeball Drop",
+            21: "Oops I dropped the editor",
+            22: "Hasenhüpfer",
+            23: "Exaltation",
+            24: "City Slick",
+            25: "spinny thingy"
         };
+
 
 
         
@@ -35209,144 +35216,152 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 const a = hb(e);
                 return null != a ? a : null
             }
-            static fromExportString(e) {
-                const t = e.replace(/\s+/g, "")
-                  , n = function(e) {
-                    const t = "PolyTrack1";
-                    if (!e.startsWith(t))
-                        return null;
-                    const n = KodubBase64Convert(e.substring(10));
-                    if (null == n)
-                        return null;
-                    const i = new Yg.Inflate({
-                        to: "string"
-                    });
-                    if (i.push(n, !0),
-                    i.err)
-                        return null;
+           static fromExportString(e) {
+                if (!e) return null;
+            
+                if (joiningServer) {
+                    const n = e;
+                    if (n == null) return null;
+            
+                    const i = new Yg.Inflate({ to: "string" });
+                    i.push(n, true);
+                    if (i.err) return null;
+            
                     const r = i.result;
-                    if ("string" != typeof r)
-                        return null;
+                    if (typeof r !== "string") return null;
+            
                     const a = KodubBase64Convert(r);
-                    if (null == a)
-                        return null;
-                    const s = new Yg.Inflate;
-                    if (s.push(a, !0),
-                    s.err)
-                        return null;
+                    if (a == null) return null;
+            
+                    const s = new Yg.Inflate();
+                    s.push(a, true);
+                    if (s.err) return null;
+            
                     const o = s.result;
-                    if (!(o instanceof Uint8Array))
-                        return null;
+                    if (!(o instanceof Uint8Array)) return null;
+            
                     const l = o[0];
-                    if (o.length < 1 + l)
-                        return null;
-                    const c = new TextDecoder("utf-8").decode(o.subarray(1, 1 + l))
-                      , h = o[1 + l];
-                    if (o.length < 1 + l + 1 + h)
-                        return null;
-                    let d;
-                    d = h > 0 ? new TextDecoder("utf-8").decode(o.subarray(1 + l + 1, 1 + l + 1 + h)) : null;
+                    if (o.length < 1 + l) return null;
+                    const c = new TextDecoder("utf-8").decode(o.subarray(1, 1 + l));
+            
+                    const h = o[1 + l];
+                    if (o.length < 1 + l + 1 + h) return null;
+                    const d = h > 0
+                        ? new TextDecoder("utf-8").decode(o.subarray(1 + l + 1, 1 + l + 1 + h))
+                        : null;
+            
                     const u = fromByteArray(1 + l + 1 + h, o);
-                    return null == u ? null : {
-                        trackMetadata: {
-                            name: c,
-                            author: d
-                        },
-                        trackData: u
-                    }
-                }(t);
-                if (null != n)
-                    return n;
-                const i = function(e) {
-                    if (!e.startsWith("v3"))
-                        return null;
-                    const t = KodubBase64Convert(e.substring(2, 4));
-                    if (null == t)
-                        return null;
-                    if (1 != t.length)
-                        return null;
-                    const n = t[0]
-                      , i = KodubBase64Convert(e.substring(4, 4 + n));
-                    if (null == i)
-                        return null;
+                    if (u == null) return null;
+            
+                    return { trackMetadata: { name: c, author: d }, trackData: u };
+                }
+            
+                const t = e.replace(/\s+/g, "");
+            
+                const parsePolyTrack1 = (str) => {
+                    const prefix = "PolyTrack1";
+                    if (!str.startsWith(prefix)) return null;
+            
+                    const n = KodubBase64Convert(str.substring(10));
+                    if (n == null) return null;
+            
+                    const i = new Yg.Inflate({ to: "string" });
+                    i.push(n, true);
+                    if (i.err) return null;
+            
+                    const r = i.result;
+                    if (typeof r !== "string") return null;
+            
+                    const a = KodubBase64Convert(r);
+                    if (a == null) return null;
+            
+                    const s = new Yg.Inflate();
+                    s.push(a, true);
+                    if (s.err) return null;
+            
+                    const o = s.result;
+                    if (!(o instanceof Uint8Array)) return null;
+            
+                    const l = o[0];
+                    if (o.length < 1 + l) return null;
+                    const c = new TextDecoder("utf-8").decode(o.subarray(1, 1 + l));
+            
+                    const h = o[1 + l];
+                    if (o.length < 1 + l + 1 + h) return null;
+                    const d = h > 0
+                        ? new TextDecoder("utf-8").decode(o.subarray(1 + l + 1, 1 + l + 1 + h))
+                        : null;
+            
+                    const u = fromByteArray(1 + l + 1 + h, o);
+                    if (u == null) return null;
+            
+                    return { trackMetadata: { name: c, author: d }, trackData: u };
+                };
+            
+                const parseV3 = (str) => {
+                    if (!str.startsWith("v3")) return null;
+            
+                    const t = KodubBase64Convert(str.substring(2, 4));
+                    if (t == null || t.length !== 1) return null;
+            
+                    const n = t[0];
+                    const i = KodubBase64Convert(str.substring(4, 4 + n));
+                    if (i == null) return null;
+            
                     let r;
-                    try {
-                        r = new TextDecoder("utf-8").decode(i)
-                    } catch (e) {
-                        return null
-                    }
-                    const a = fb(e.substring(4 + n));
-                    return null == a ? null : {
-                        trackMetadata: {
-                            name: r,
-                            author: null
-                        },
-                        trackData: a
-                    }
-                }(t);
-                if (null != i)
-                    return i;
-                const r = function(e) {
-                    if (!e.startsWith("v2"))
-                        return null;
-                    const t = KodubBase64Convert(e.substring(2, 4));
-                    if (null == t)
-                        return null;
-                    if (1 != t.length)
-                        return null;
-                    const n = t[0]
-                      , i = Math.ceil(n / 3 * 4)
-                      , r = KodubBase64Convert(e.substring(4, 4 + i));
-                    if (null == r)
-                        return null;
+                    try { r = new TextDecoder("utf-8").decode(i); } 
+                    catch (err) { return null; }
+            
+                    const a = fb(str.substring(4 + n));
+                    if (a == null) return null;
+            
+                    return { trackMetadata: { name: r, author: null }, trackData: a };
+                };
+            
+                const parseV2 = (str) => {
+                    if (!str.startsWith("v2")) return null;
+            
+                    const t = KodubBase64Convert(str.substring(2, 4));
+                    if (t == null || t.length !== 1) return null;
+            
+                    const n = t[0];
+                    const i = Math.ceil(n / 3 * 4);
+                    const r = KodubBase64Convert(str.substring(4, 4 + i));
+                    if (r == null) return null;
+            
                     let a;
-                    try {
-                        a = new TextDecoder("utf-8").decode(r)
-                    } catch (e) {
-                        return null
-                    }
-                    const s = pb(e.substring(4 + i));
-                    return null == s ? null : {
-                        trackMetadata: {
-                            name: a,
-                            author: null
-                        },
-                        trackData: s
-                    }
-                }(t);
-                if (null != r)
-                    return r;
-                const a = function(e) {
-                    if (!e.startsWith("v1n"))
-                        return null;
-                    const t = Kg(e.substring(3, 5));
-                    if (null == t)
-                        return null;
-                    if (1 != t.length)
-                        return null;
-                    const n = t[0]
-                      , i = e.substring(5, 5 + n);
+                    try { a = new TextDecoder("utf-8").decode(r); } 
+                    catch (err) { return null; }
+            
+                    const s = pb(str.substring(4 + i));
+                    if (s == null) return null;
+            
+                    return { trackMetadata: { name: a, author: null }, trackData: s };
+                };
+            
+                const parseV1n = (str) => {
+                    if (!str.startsWith("v1n")) return null;
+            
+                    const t = Kg(str.substring(3, 5));
+                    if (t == null || t.length !== 1) return null;
+            
+                    const n = t[0];
+                    const i = str.substring(5, 5 + n);
+            
                     let r;
-                    try {
-                        r = decodeURIComponent(i)
-                    } catch (e) {
-                        return console.error(e),
-                        null
-                    }
-                    const a = ub(e.substring(5 + n));
-                    return null == a ? null : {
-                        trackMetadata: {
-                            name: r,
-                            author: null
-                        },
-                        trackData: a
-                    }
-                }(t);
-                if (null != a)
-                    return a;
-                const s = db(e);
-                return null != s ? s : null
+                    try { r = decodeURIComponent(i); } 
+                    catch (err) { console.error(err); return null; }
+            
+                    const a = ub(str.substring(5 + n));
+                    if (a == null) return null;
+            
+                    return { trackMetadata: { name: r, author: null }, trackData: a };
+                };
+            
+                return parsePolyTrack1(t) || parseV3(t) || parseV2(t) || parseV1n(t) || db(e) || null;
             }
+
+
             createThumbnail() {
                 let e = 1 / 0
                   , t = 1 / 0
