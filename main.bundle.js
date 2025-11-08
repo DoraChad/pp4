@@ -1599,6 +1599,33 @@ class PP4_ServerCommunication {
     constructor(url) {
         this.url = url;
     }
+    async updateUsername(userId, newName) {
+        if (!userId) {
+            console.error("missing id");
+            return;
+        }
+        if (!newName) {
+            console.error("missing new username");
+            return;
+        }
+    
+        fetch(`${this.url}updateName`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, newName })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "ok") {
+            } else {
+                console.error(data.error);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+        });
+    }
+
     async submitRun(playerData) {
         try {
             const response = await fetch(`${this.url}submit`, {
@@ -45332,16 +45359,17 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     }
                     ),(t => {
                         var n;
+                        const pm = profileManager.getUserProfile(e);
                         if (null === (n = get(this, $L, "f")) || void 0 === n || n.dispose(),
                         set(this, $L, null, "f"),
                         t != (null == l ? void 0 : l.nickname)) {
                             profileManager.setNickname(t, e);
-                            const n = profileManager.getUserProfile(e);
-                            null != n && h.submitUserProfile(n.token, n.nickname, n.carColors, n.hornCol, n.carStripeId).catch((e => {
+                            null != pm && h.submitUserProfile(pm.token, pm.nickname, pm.carColors, pm.hornCol, pm.carStripeId).catch((e => {
                                 console.warn(e)
                             }
                             ))
                         }
+                        PP4_server.updateUsername(pm.token, t)
                         profileManager.setProfileSlot(e),
                         get(this, trackSelectionScreen, "f").refresh(),
                         r()
