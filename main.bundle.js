@@ -48222,6 +48222,34 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
+                const serializeColor = function(color) {
+                    return { r: color.r, g: color.g, b: color.b };
+                }
+
+                //DORACHAD
+                if (joiningServer) {
+                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+                    const submitColors = {
+                        primary: serializeColor(carColors.primary),
+                        secondary: serializeColor(carColors.secondary),
+                        frame: serializeColor(carColors.frame),
+                        rims: serializeColor(carColors.rims)
+                    };
+                    
+                    const playerData = {
+                        replayCode: rawRecording.serialize(),
+                        userId: userToken,
+                        name: username,
+                        carColors: JSON.stringify(submitColors),
+                        frames: recordingTime.numberOfFrames,
+                        track: `track${trackNumber}`
+                    };
+                    
+                    PP4_server.submitRun(playerData);
+
+                }
+                //
+                
                 return new Promise((resolve, reject) => {
                     if (this.determinismState != VI.Ok)
                         reject(new Error("Submit not allowed"));
