@@ -2552,6 +2552,8 @@ class PP4UI {
                     
                     this.serverTabs = [];
                     const trackNumber = this.getServerNumber(this.userServerNumber * 8)
+
+                    PP4_stats.stopTiming();
                     
                     joiningServer = true;
                     multiplayerEnabled = true;
