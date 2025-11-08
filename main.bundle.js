@@ -1564,9 +1564,12 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
-
+let watchingClipFlag = false;
 let PP4_recordingClass;
-
+let pp4_watchFunction = () => {};
+let PP4_replayLoader;
+let pp4_carColorDeserializer;
+let pp4_carColorDeserializer2;
 
 let hideOtherPlayersFlag = false;
 let pp_User;
@@ -1743,8 +1746,9 @@ class clippingManager {
         if (!joiningServer) return;
         const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
         const replayCode = PP4_recordingClass.getRecording().serialize()
-        console.log(replayCode, trackNumber);
-        this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, data: replayCode })
+        const carColors = pp4_carColorDeserializer2.serialize(window.multiplayerClient.carColors);
+        const time = PP4_recordingClass.getTime().numberOfFrames;
+        this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, colors: carColors, frames: time, data: replayCode })
         PP4_ui.log("Clip Saved");
     }
     localAdd(clip) {
@@ -1847,7 +1851,6 @@ class PP4UI {
             padding: 10px 20px;
             vertical-align: top;
             width: calc(100% - 10px * 2);
-            height: 100px;
             clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
             text-align: left;
             white-space: nowrap;
@@ -1982,6 +1985,7 @@ class PP4UI {
     }
     pbPopup(users) {
 
+        if (!joiningServer) return;
         if (!this.previousPlayers) {
             this.previousPlayers = JSON.parse(JSON.stringify(users));
             return;
@@ -2590,9 +2594,17 @@ class PP4UI {
         });
 
 
-        const createEntry = function(clipId, trackName, author) {
+        const createEntry = function(data, names) {
+
+            const clipId = data.id;
+            const trackNum = data.track;
+            const trackName = names[trackNum];
+            const author = data.author;
+            const colors = data.colors;
+            const frames = data.frames
+            const replayData = data.data;
             
-            const div = document.createElement("div");
+            const div = document.createElement("button");
             div.className = "button clip-menu-entry";
 
             const header = document.createElement("h2");
@@ -2600,6 +2612,27 @@ class PP4UI {
 
             const trackText = document.createElement("p");
             trackText.textContent = trackName;
+
+            div.addEventListener("click", async () => {
+                const code = await PP4_server.getTrackCode(trackNum);
+                background.remove();
+                forceLoadTrackByCode(code);
+
+                const processed = PP4_replayLoader.loadClip({
+                    recording: replayData,
+                    frames: frames
+                })
+                
+                pp4_watchFunction([{
+                    recording: processed.recording,
+                    carColors: pp4_carColorDeserializer.deserialize(colors),
+                    name: author,
+                    time: processed.time,
+                    isSelf: false
+                }])
+
+                watchingClipFlag = true;
+            })
 
             div.appendChild(header);
             div.appendChild(trackText);
@@ -2609,7 +2642,7 @@ class PP4UI {
         const clipData = PP4_clipping.getAllClips();
 
         clipData.forEach(e => {
-            createEntry(e.id, this.trackNames[e.track], e.author);
+            createEntry(e, this.trackNames);
         })
         
         
@@ -27022,6 +27055,9 @@ PP4_ui.initInfoLogs();
         const StaticCamera2 = StaticCamera;
         class CarColors {
             constructor(e, t, n, i) {
+
+                pp4_carColorDeserializer2 = this;
+                
                 this.primary = e,
                 this.secondary = t,
                 this.frame = n,
@@ -27045,6 +27081,11 @@ PP4_ui.initInfoLogs();
                 return new CarColors(t[0],t[1],t[2],t[3])
             }
         }
+
+        //DORACHAD
+        pp4_carColorDeserializer = CarColors;
+        //
+        
         const CarColors2 = CarColors;
         var Iu, Ru, Lu, Du, Nu, Bu, Uu, set = function(e, t, n, i, r) {
             if ("m" === i)
@@ -41007,7 +41048,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         ;
         const V_ = class {
             constructor(e, t, n, i, r, a) {
-
+                
                 pp4_exitTrackCallback = r;
                 
                 I_.add(this),
@@ -41031,6 +41072,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     get(this, I_, "m", O_).call(this)
                 }
                 ), "f"));
+
+                
                 const o = document.createElement("button");
                 o.className = "button",
                 o.innerHTML = '<img class="button-icon" src="images/quit.svg"> ',
@@ -41881,8 +41924,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 set(this, UC, trackCategory, "f"),
                 n.loadTrackData(trackData),
                 n.generateMeshes(),
-                i.generateMountains(n.getBounds()),
-
+                i.generateMountains(n.getBounds());
+                    
                 this.lastSentMultiplayerCarUpdateTime = 0,
 
                 set(this, replayGhostCars, recordingList.map((e => ({
@@ -43987,6 +44030,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         ;
         const TrackSelectedMenu = class {
             constructor(e, t, n, i, r, a, s, loadedTrackInfo, l, c, trackPreviewCanvas, d, exitTrackLeaderboardToTrackSelector, p, loadInTrackWithGhosts, m, g) {
+                
+                pp4_watchFunction = g;
+                
                 var v;
                 xR.add(this),
                 kR.set(this, void 0),
@@ -44120,44 +44166,60 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, menuWatchButton, "f").innerHTML = '<img src="images/preview.svg">',
                 get(this, menuWatchButton, "f").disabled = !0,
                 get(this, menuWatchButton, "f").prepend(document.createTextNode(t.get("Watch"))),
-                get(this, menuWatchButton, "f").addEventListener("click", ( () => {
-                    if (a.playUIClick(),
-                    l.hasStartingPoint()) {
+                get(this, menuWatchButton, "f").addEventListener("click", () => {
+                    a.playUIClick();
+                
+                    if (l.hasStartingPoint()) {
                         const e = get(this, BR, "f");
-                        if (e.length > 0)
-                            m(get(this, ER, "f").getRecordings(e.map((e => e.recordingId))).then((t => {
-                                if (t.some((e => null == e)))
-                                    throw new Error("Failed to load at least one recording.");
-                                return t.filter((e => null != e)).map(( (t, n) => ({
-                                    recording: t.recording,
-                                    carColors: t.carColors,
-                                    name: e[n].name,
-                                    time: t.time,
-                                    isSelf: e[n].isSelf
-                                })))
-                            }
-                            )));
-                        else {
+                
+                        if (e.length > 0) {
+                            m(
+                                get(this, ER, "f")
+                                    .getRecordings(e.map(e => e.recordingId))
+                                    .then(t => {
+                                        if (t.some(e => e == null))
+                                            throw new Error("Failed to load at least one recording.");
+                
+                                        return t
+                                            .filter(e => e != null)
+                                            .map((t, n) => ({
+                                                recording: t.recording,
+                                                carColors: t.carColors,
+                                                name: e[n].name,
+                                                time: t.time,
+                                                isSelf: e[n].isSelf
+                                            }));
+                                    })
+                            );
+                        } else {
                             const e = r.getRecord(i.profileSlot, c);
-                            if (null != e) {
+                
+                            if (e != null) {
                                 const t = i.getCurrentUserProfile();
-                                g([{
-                                    recording: e.recording,
-                                    carColors: t.carColors,
-                                    name: t.nickname,
-                                    time: e.time,
-                                    isSelf: !0
-                                }])
+                
+                                g([
+                                    {
+                                        recording: e.recording,
+                                        carColors: t.carColors,
+                                        name: t.nickname,
+                                        time: e.time,
+                                        isSelf: true
+                                    }
+                                ]);
                             }
                         }
-                    } else
-                        get(this, CR, "f").classList.add("hidden"),
-                        s.show(t.get("Track is missing starting point"), t.get("Ok"), ( () => {
-                            get(this, CR, "f").classList.remove("hidden")
-                        }
-                        ))
-                }
-                )),
+                    } else {
+                        get(this, CR, "f").classList.add("hidden");
+                
+                        s.show(
+                            t.get("Track is missing starting point"),
+                            t.get("Ok"),
+                            () => {
+                                get(this, CR, "f").classList.remove("hidden");
+                            }
+                        );
+                    }
+                }),
                 get(this, PR, "f").appendChild(get(this, menuWatchButton, "f"));
 
                 if (!isRanked) {
@@ -45068,19 +45130,19 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             v.appendChild(w),
             get(this, nD, "f").appendChild(v),
             get(this, iD, "f").push(v);
-            const y = document.createElement("button");
-            y.className = "button button-image",
-            y.innerHTML = '<img src="images/editor.svg">',
-            y.addEventListener("click", ( () => {
-                audioCtx.playUIClick(),
-                p()
-            }
-            ));
-            const A = document.createElement("p");
-            A.textContent = langObject.get("Editor"),
-            y.appendChild(A),
-            get(this, nD, "f").appendChild(y),
-            get(this, iD, "f").push(y);
+            //const y = document.createElement("button");
+            //y.className = "button button-image",
+            //y.innerHTML = '<img src="images/editor.svg">',
+            //y.addEventListener("click", ( () => {
+           //     audioCtx.playUIClick(),
+           //     p()
+           // }
+            //));
+            //const A = document.createElement("p");
+            //A.textContent = langObject.get("Editor"),
+            //y.appendChild(A),
+            //get(this, nD, "f").appendChild(y),
+            //get(this, iD, "f").push(y);
             const b = document.createElement("button");
             b.className = "button button-image",
             b.innerHTML = '<img src="images/settings.svg">',
@@ -47196,6 +47258,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         };
         class TB {
             constructor(e) {
+
+                PP4_replayLoader = this;
+                
                 aB.add(this),
                 oB.set(this, void 0),
                 set(this, oB, null == e ? {
@@ -47236,6 +47301,25 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     console.error(e)
                 }
             }
+            //DORACHAD clipping
+            loadClip(s) {
+                if ("object" != typeof s)
+                    return null;
+                if (!("frames"in s))
+                    return null;
+                const c = Number.parseInt(s.frames, 10);
+                if (!Number.isSafeInteger(c))
+                    return null;
+                const h = new TimeObject(c);
+                if (!("recording"in s))
+                    return null;
+                const d = cv.deserialize(s.recording);
+                return null == d ? null : {
+                    time: h,
+                    recording: d
+                }
+            }
+            //
             loadRecord(e, t, n, i) {
                 if (!Number.isSafeInteger(e) || e < 0)
                     throw new Error("Profile slot is invalid");
@@ -53295,7 +53379,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 h.getSettingBoolean($o.DefaultCameraMode) ? o.setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraCockpit) : o.setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraOrbit),
                 set(this, RO, new s_(o,h), "f"),
                 get(this, RO, "f").addToggleListener((e => {
-                    e ? o.setCamera(get(this, RO, "f").camera) : get(this, SO, "f").getSettingBoolean($o.DefaultCameraMode) ? get(this, xO, "f").setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraCockpit) : get(this, xO, "f").setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraOrbit)
+                    e ? o.setCamera(get(this, RO,                                                                             "f").camera) : get(this, SO, "f").getSettingBoolean($o.DefaultCameraMode) ? get(this, xO, "f").setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraCockpit) : get(this, xO, "f").setCamera(get(this, replayGhostCars, "f")[get(this, TO, "f")].car.cameraOrbit)
                 }
                 )),
                 get(this, fO, "m", HO).call(this, !0),
@@ -53303,9 +53387,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     if (get(this, RO, "f").isEnabled)
                         "Escape" == e.code && (get(this, RO, "f").isEnabled = !1,
                         e.preventDefault());
-                    else if ("Escape" == e.code)
-                        u(n, i, r, get(this, replayGhostCars, "f").map((e => e.settings))),
+                    else if ("Escape" == e.code) {
+                        u(n, i, r, get(this, replayGhostCars, "f").map((e => e.settings)));
                         e.preventDefault();
+                    }
                     else if (h.checkKeyBinding(e, Ix.VehicleCheckpointReset) || h.checkKeyBinding(e, Ix.VehicleStartReset))
                         e.repeat || set(this, PO, 0, "f"),
                         e.preventDefault();
@@ -53660,6 +53745,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
               , loadCarIntoTrack5 = (environment, trackData, trackCategory, recordingList) => {   // important - root loading of track
                 i.trigger(( () => {
+
+
+                    
                     Z_(),
                     L.dispose();
                     const i = m.profileSlot
