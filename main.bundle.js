@@ -1,3 +1,16 @@
+window.onerror = function (msg, url, line, col, error) {
+    PP4_ui.log(`Error: ${msg}\nFile: ${url}\nLine: ${line}:${col}`);
+    return true;
+};
+
+window.onunhandledrejection = function (event) {
+    PP4_ui.log(`Promise Error: ${event.reason}`);
+    return true;
+};
+
+
+
+
 const modVersion = "0.5.1 - PP4";
 
 const serverUpdateHz = 15;
@@ -1720,21 +1733,27 @@ class playerStats {
             console.log("Timer not started");
             return;
         }
+    
         this.endTime = Date.now();
         const ms = this.endTime - this.startTime;
         const seconds = (ms / 1000).toFixed(3);
-        
-        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
+        const roundedSeconds = Math.round(seconds);
+    
+        if (roundedSeconds <= 0 && this.numOfResets <= 0) {
+            console.log("No data");
+            this.startTime = null;
+            this.endTime = null;
+            this.numOfResets = 0;
+            return;
+        }
+    
+        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
         const data = {
             userId: window.multiplayerClient.publicToken,
             track: `track${trackNumber}`,
-            playTime: Math.round(seconds),  
+            playTime: roundedSeconds,
             resets: this.numOfResets
-        }
-
-        console.log(data);
-        
-        PP4_server.submitStats(data)
+        };
     }
 }
 
@@ -53745,8 +53764,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
               , loadCarIntoTrack5 = (environment, trackData, trackCategory, recordingList) => {   // important - root loading of track
                 i.trigger(( () => {
-
-
                     
                     Z_(),
                     L.dispose();
