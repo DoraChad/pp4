@@ -1587,6 +1587,8 @@ let pp4_carColorDeserializer2;
 let hideOtherPlayersFlag = false;
 let pp_User;
 let joiningServer = false;
+let customCode = false;
+
 let PP4_ServerTab_button;
 let PP4_main_container;
 let pp4_timer;
@@ -2236,6 +2238,7 @@ class PP4UI {
             this.userServerNumber = serverNumber;
             
             joiningServer = true;
+            customCode = true;
             multiplayerEnabled = true;
             window.multiplayerClient.inRankedMatch = false;
             const code = await PP4_server.getTrackCode(trackNumber);
@@ -2655,6 +2658,7 @@ class PP4UI {
                     PP4_stats.stopTiming();
                     
                     joiningServer = true;
+                    customCode = true;
                     multiplayerEnabled = true;
                     window.multiplayerClient.inRankedMatch = false;
                     const code = await PP4_server.getTrackCode(trackNumber);
@@ -2742,6 +2746,9 @@ class PP4UI {
                     recording: replayData,
                     frames: frames
                 })
+
+                watchingClipFlag = true;
+                customCode = true;
                 
                 pp4_watchFunction([{
                     recording: processed.recording,
@@ -2750,8 +2757,6 @@ class PP4UI {
                     time: processed.time,
                     isSelf: false
                 }])
-
-                watchingClipFlag = true;
             })
 
             div.appendChild(header);
@@ -35227,7 +35232,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
            static fromExportString(e) {
                 if (!e) return null;
             
-                if (joiningServer) {
+                if (customCode) {
                     const n = e;
                     if (n == null) return null;
             
@@ -53915,6 +53920,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                           //DORACHAD
                         multiplayerEnabled = false;
                         joiningServer = false;
+                        customCode = false;
                         PP4_stats.stopTiming();
                           //
                         T(!0)
