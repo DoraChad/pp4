@@ -1627,6 +1627,7 @@ class PP4_ServerCommunication {
     }
 
     async submitRun(playerData) {
+        console.log(playerData);
         try {
             const response = await fetch(`${this.url}submit`, {
                 method: "POST",
@@ -1787,6 +1788,10 @@ class playerStats {
             playTime: roundedSeconds,
             resets: this.numOfResets
         };
+
+        console.log(data);
+        
+        PP4_server.submitStats(data)
     }
 }
 
@@ -1836,6 +1841,9 @@ class clippingManager {
 class PP4UI {
     constructor() {
 
+        this.userServerNumber = 0;
+        //
+        
         this.serverPlayers = [];
         this.serverTabs = [];
         this.trackNames = {
@@ -48324,29 +48332,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     return { r: color.r, g: color.g, b: color.b };
                 }
 
-                //DORACHAD
-                if (joiningServer) {
-                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
-                    const submitColors = {
-                        primary: serializeColor(carColors.primary),
-                        secondary: serializeColor(carColors.secondary),
-                        frame: serializeColor(carColors.frame),
-                        rims: serializeColor(carColors.rims)
-                    };
-                    
-                    const playerData = {
-                        replayCode: rawRecording.serialize(),
-                        userId: userToken,
-                        name: username,
-                        carColors: JSON.stringify(submitColors),
-                        frames: recordingTime.numberOfFrames,
-                        track: `track${trackNumber}`
-                    };
-                    
-                    PP4_server.submitRun(playerData);
-
-                }
-                //
                 
                 return new Promise((resolve, reject) => {
                     if (this.determinismState != VI.Ok)
@@ -48365,6 +48350,29 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                 Number.isSafeInteger(t) ? resolve({
                                     uploadId: t
                                 }) : reject(new Error("UploadId is not a safe integer"))
+
+
+                                //DORACHAD
+                                //if (joiningServer) {
+                                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+                                    const submitColors = {
+                                        primary: serializeColor(carColors.primary),
+                                        secondary: serializeColor(carColors.secondary),
+                                        frame: serializeColor(carColors.frame),
+                                        rims: serializeColor(carColors.rims)
+                                    };
+                                    
+                                    const playerData = {
+                                        replayId: t,
+                                        userId: userToken,
+                                        name: username,
+                                        track: `track${trackNumber}`
+                                    };
+                                    
+                                    PP4_server.submitRun(playerData);
+                
+                                //}
+                                //
                             }
                         } catch (e) {
                             reject(new Error("Unknown error: " + String(e)))
