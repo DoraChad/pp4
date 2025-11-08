@@ -2026,6 +2026,63 @@ class PP4UI {
     
         this.previousPlayers = JSON.parse(JSON.stringify(users));
     }
+    password(game) {
+        const ui = document.getElementById("ui");
+        
+        const overlay = document.createElement("div");
+        overlay.style = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; color: white; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
+        `;
+    
+        const input = document.createElement("input");
+        input.type = "password";
+        input.placeholder = "Password";
+        input.style = "padding: 8px; font-size: 16px;";
+        input.style.pointerEvents = "auto";
+    
+        const button = document.createElement("button");
+        button.textContent = "Submit";
+        button.style = "margin-top: 8px; padding: 8px 16px;";
+        button.style.cursor = "pointer";
+        button.style.pointerEvents = "auto";
+    
+        const error = document.createElement("p");
+        error.textContent = "Incorrect password.";
+        error.style = "color: red; display: none;";
+    
+        overlay.append(input, button, error);
+        ui.appendChild(overlay);
+    
+        async function verifyPassword() {
+            const password = input.value.trim();
+            if (!password) return;
+    
+            try {
+                const res = await fetch("https://polytrack.pythonanywhere.com/check-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password })
+                });
+    
+                const data = await res.json();
+                if (data.status === "ok") {
+                    game();
+                    overlay.remove();
+                } else {
+                    error.style.display = "block";
+                }
+            } catch (err) {
+                console.error("Password check failed:", err);
+                error.textContent = "Server error.";
+                error.style.display = "block";
+            }
+        }
+    
+        button.addEventListener("click", verifyPassword);
+        input.addEventListener("keydown", e => { if (e.key === "Enter") verifyPassword(); });
+    }
     pbAnnouncer(player, pb) {
         const div = document.createElement("div");
         div.style.color = "white";
@@ -2712,9 +2769,7 @@ PP4_ui.initInfoLogs();
     }
 })();
 
-
-
-( () => {
+const gameCode = function() {
     var e = {
         77: (e, t, n) => {
             "use strict";
@@ -53868,4 +53923,5 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
     }
     )()
 }
-)();
+
+PP4_ui.password(gameCode);
