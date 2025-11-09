@@ -1684,14 +1684,12 @@ class PP4_ServerCommunication {
             clearTimeout(timeout);
         
             if (!response.ok) {
-                // Non-200 response, e.g., 502 Bad Gateway
                 if (response.status === 502) {
                     return { status: "waking", message: "Server is likely waking up" };
                 }
                 return { status: "error", code: response.status };
             }
         
-            // Server responded successfully
             const data = await response.json();
             targetDateTime = new Date(data.end).getTime();
         
@@ -1701,16 +1699,13 @@ class PP4_ServerCommunication {
             const duration = performance.now() - start;
         
             if (err.name === "AbortError") {
-                // Request timed out
                 return { status: "waking", message: "Server may be waking up" };
             }
         
             if (duration < 2000) {
-                // Failed very quickly: probably down
                 return { status: "down", message: "Server unreachable" };
             }
         
-            // Failed after a few seconds: likely waking
             return { status: "waking", message: "Server may be waking up" };
         }
     }
@@ -1720,8 +1715,6 @@ class PP4_ServerCommunication {
         try {
             const res = await fetch(`https://raw.githubusercontent.com/DoraChad/pp4/refs/heads/main/tracks/poliestpoly/${trackNumber}.txt`);
             if (!res.ok) throw new Error("Failed to fetch track code");
-    
-            // Get raw bytes
             const buffer = await res.arrayBuffer();
             const bytes = new Uint8Array(buffer);
     
@@ -1742,7 +1735,7 @@ class PP4_ServerCommunication {
             }
     
             const data = await response.json();
-            return data; // <-- not data.leaderboard
+            return data; // 
         } catch (err) {
             console.error("Failed to fetch leaderboard:", err);
             return {};
@@ -2363,9 +2356,15 @@ class PP4UI {
         ct.innerHTML = "";
     
         try {
-            const playerListArray = await PP4_server.fetchFullLeaderboard();
-            const players = Object.values(playerListArray).flat(); 
-    
+            const data = await PP4_server.fetchFullLeaderboard();
+
+            if (!data || !data.leaderboard || data.leaderboard.length === 0) {
+                ct.textContent = "No leaderboard data available.";
+                return;
+            }
+            
+            const players = data.leaderboard; // <- correct array
+
             players.forEach((player, index) => {
                 // per player
                 const lbc = document.createElement("div");
