@@ -48643,7 +48643,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
 
 
                                 //DORACHAD
-                                //if (joiningServer) {
+                                if (joiningServer) {
                                     const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
                                     const submitColors = {
                                         primary: serializeColor(carColors.primary),
@@ -48661,7 +48661,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                     
                                     PP4_server.submitRun(playerData);
                 
-                                //}
+                                }
                                 //
                             }
                         } catch (e) {
