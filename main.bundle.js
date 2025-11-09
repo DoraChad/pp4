@@ -1,11 +1,9 @@
 window.onerror = function (msg, url, line, col, error) {
     PP4_ui.log(`Error: ${msg}\nFile: ${url}\nLine: ${line}:${col}`);
-    return true;
 };
 
 window.onunhandledrejection = function (event) {
     PP4_ui.log(`Promise Error: ${event.reason}`);
-    return true;
 };
 
 
@@ -1577,6 +1575,7 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+let pp4_clipCodes = null;
 let watchingClipFlag = false;
 let PP4_recordingClass;
 let pp4_watchFunction = () => {};
@@ -1803,31 +1802,40 @@ class clippingManager {
     }
     createClip() {
         if (!joiningServer) return;
+
+        
         const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
         const replayCode = PP4_recordingClass.getRecording().serialize()
-        const carColors = pp4_carColorDeserializer2.serialize(window.multiplayerClient.carColors);
+        const carColors = pp4_carColorDeserializer2.serialize(PP4_recordingClass.getColors());
         const time = PP4_recordingClass.getTime().numberOfFrames;
+        
         this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, colors: carColors, frames: time, data: replayCode })
         PP4_ui.log("Clip Saved");
     }
-    localAdd(clip) {
-        const clips = JSON.parse(localStorage.getItem(this.localKey) || "[]");
+    localAdd(clipData) {
+        const clips = this.getAllClips(); 
     
-        if (!clip.id) {
-            let i = 1;
-            let newId;
-            do {
-                newId = `Clip${i}`;
-                i++;
-            } while (clips.some(c => c.id === newId));
-            clip.id = newId;
+        let originalId = clipData.id || "clip";
+        let newId = originalId;
+        let counter = 1;
+        while (clips.find(c => c.id === newId)) {
+            newId = `${originalId}_${counter}`;
+            counter++;
         }
+        clipData.id = newId;
+    
+        clips.push(clipData);
+    
+        localStorage.setItem(this.localKey, JSON.stringify(clips));
+    
 
-        if (!clips.some(c => c.id === clip.id)) {
-            clips.push(clip);
-            localStorage.setItem(this.localKey, JSON.stringify(clips));
+        if (typeof this.updateClipsMenu === "function") {
+            this.updateClipsMenu();
         }
+    
     }
+
+
     
     localDelete(id) {
         const clips = JSON.parse(localStorage.getItem(this.localKey) || "[]");
@@ -1917,6 +1925,9 @@ class PP4UI {
             clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
             text-align: left;
             white-space: nowrap;
+        }
+        .clip-menu-entry.selected {
+            background: #334b77;
         }
         .clip-menu-entry > h2 {
             padding: 0 0 10px 0;
@@ -2020,6 +2031,34 @@ class PP4UI {
             position: absolute;
             top: 0;
             right: 0;
+        }
+        .box-message {
+            position: absolute;
+            left: calc(50% - 80% / 2);
+            top: 20px;
+            z-index: 2;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            width: 80%;
+            height: calc(100% - 40px);
+            background-color: var(--surface-color);
+        }
+        .box-message > textarea {
+            margin: 10px 0 0 0;
+            padding: 10px;
+            box-sizing: border-box;
+            min-width: 100%;
+            max-width: 100%;
+            min-height: calc(100% - 62px);
+            max-height: calc(100% - 62px);
+            pointer-events: auto;
+            background-color: var(--surface-tertiary-color);
+            border: none;
+            resize: none;
+            color: var(--text-color);
+            word-break: break-all;
+            font-size: 20px;
         }
         `;
         
@@ -2691,21 +2730,67 @@ class PP4UI {
         }
         this.HUDtimer?.remove();
     }
+    BoxDisplay(content, importFunc = null) {
+
+        const ui = document.getElementById("ui");
+        
+        const box = document.createElement("div");
+        box.style.height = "100%";
+        box.style.top = "0";
+        box.className = "box-message";
+
+        const bar = document.createElement("div");
+
+        const text = document.createElement("textarea");
+        text.className = "textarea";
+        text.value = content;
+
+        const backButton = document.createElement("button");
+        backButton.className = "button";
+        backButton.innerHTML = '<img class="button-icon" src="images/back.svg"> ';
+        backButton.append("Back");
+        backButton.style.width = "150px";
+        backButton.addEventListener("click", () => {
+            box.remove();
+        });
+
+        if (importFunc) {
+            const importButton = document.createElement("button");
+            importButton.className = "button";
+            importButton.innerHTML = '<img class="button-icon" src="images/import.svg"> ';
+            importButton.append("Import");
+            importButton.style.width = "180px";
+            importButton.style.float = "right";
+            importButton.addEventListener("click", () => {
+                box.remove();
+                importFunc(text.value);
+            });
+            bar.appendChild(importButton);
+        }
+
+        bar.appendChild(backButton);
+        box.appendChild(bar);
+        box.appendChild(text);
+        ui.appendChild(box)
+    }
 
     CreateClipsMenu(exitFunc) {
         const ui = document.getElementById("ui");
     
         const background = document.createElement("div");
-        background.className = "clip-menu-bg"
-
+        background.className = "clip-menu-bg";
+    
         const headText = document.createElement("h2");
         headText.textContent = "Your Clips:";
-
+    
         const container = document.createElement("div");
         container.className = "clip-menu-container";
-
-        const wrapper = document.createElement("div")
+    
+        const wrapper = document.createElement("div");
         wrapper.className = "clip-menu-wrapper";
+    
+
+        const clipData = PP4_clipping.getAllClips();
         
         const backButton = document.createElement("button");
         backButton.className = "button";
@@ -2716,68 +2801,143 @@ class PP4UI {
             background.remove();
             exitFunc();
         });
+    
 
+        const exportButton = document.createElement("button");
+        exportButton.className = "button";
+        exportButton.innerHTML = '<img class="button-icon" src="images/share.svg"> ';
+        exportButton.append("Export");
+        exportButton.style.width = "180px";
+        exportButton.style.float = "right";
+        exportButton.addEventListener("click", () => {
+            let encode = new pp4_clipCodes();
+
+            const selected = container.querySelector(".clip-menu-entry.selected");
+            if (!selected) {
+                alert("Please select a clip first!");
+                return;
+            }
+        
+            const clipIndex = Array.from(container.children).indexOf(selected);
+            const clip = clipData[clipIndex];
+        
+            const clipObj = {
+                author: clip.author,
+                id: clip.id,
+                track: clip.track,
+                colors: clip.colors,
+                frames: clip.frames,
+                data: clip.data
+            };
+
+            this.BoxDisplay(encode.exportClip(clipObj));
+            encode = null;
+        })
+    
+
+        const importButton = document.createElement("button");
+        importButton.className = "button";
+        importButton.innerHTML = '<img class="button-icon" src="images/import.svg"> ';
+        importButton.append("Import");
+        importButton.style.width = "180px";
+        importButton.style.float = "right";
+        importButton.addEventListener("click", () => {
+            
+            this.BoxDisplay("", (e) => {
+                let encode = new pp4_clipCodes();
+                const decoded = encode.importClip(e);
+                encode = null;
+
+                PP4_clipping.localAdd({ id: decoded.id, track: decoded.track, author: decoded.author, colors: decoded.colors, frames: decoded.frames, data: decoded.data })
+                createEntry(decoded, this.trackNames);
+                clipData.push(decoded);
+            });
+        })
+    
+    
+
+        const watchButton = document.createElement("button");
+        watchButton.className = "button";
+        watchButton.innerHTML = '<img class="button-icon" src="images/play.svg"> ';
+        watchButton.append("Watch");
+        watchButton.style.width = "180px";
+        watchButton.style.float = "right";
+        watchButton.addEventListener("click", async () => {
+            const selected = container.querySelector(".clip-menu-entry.selected");
+            if (!selected) return;
+    
+            const clipIndex = Array.from(container.children).indexOf(selected);
+            const clip = clipData[clipIndex];
+    
+            watchingClipFlag = true;
+            customCode = true;
+    
+            const code = await PP4_server.getTrackCode(clip.track);
+            background.remove();
+            forceLoadTrackByCode(code);
+    
+            const processed = PP4_replayLoader.loadClip({
+                recording: clip.data,
+                frames: clip.frames
+            });
+    
+            pp4_watchFunction([{
+                recording: processed.recording,
+                carColors: pp4_carColorDeserializer.deserialize(clip.colors),
+                name: clip.author,
+                time: processed.time,
+                isSelf: false
+            }]);
+        });
+    
 
         const createEntry = function(data, names) {
-
             const clipId = data.id;
             const trackNum = data.track;
             const trackName = names[trackNum];
             const author = data.author;
             const colors = data.colors;
-            const frames = data.frames
+            const frames = data.frames;
             const replayData = data.data;
-            
+    
             const div = document.createElement("button");
             div.className = "button clip-menu-entry";
-
+    
             const header = document.createElement("h2");
             header.textContent = clipId;
-
+    
             const trackText = document.createElement("p");
             trackText.textContent = trackName;
-
-            div.addEventListener("click", async () => {
-
-                watchingClipFlag = true;
-                customCode = true;
     
-                const code = await PP4_server.getTrackCode(trackNum);
-                background.remove();
-                forceLoadTrackByCode(code);
-
-                const processed = PP4_replayLoader.loadClip({
-                    recording: replayData,
-                    frames: frames
-                })
-                
-                pp4_watchFunction([{
-                    recording: processed.recording,
-                    carColors: pp4_carColorDeserializer.deserialize(colors),
-                    name: author,
-                    time: processed.time,
-                    isSelf: false
-                }])
-            })
-
+            div.addEventListener("click", () => {
+                const isSelected = div.classList.contains('selected');
+    
+                Array.from(container.children).forEach(c => c.classList.remove('selected'));
+    
+                if (!isSelected) div.classList.add('selected');
+            });
+    
             div.appendChild(header);
             div.appendChild(trackText);
-            container.appendChild(div)
-        }
-        
-        const clipData = PP4_clipping.getAllClips();
+            container.appendChild(div);
+        };
+    
 
         clipData.forEach(e => {
             createEntry(e, this.trackNames);
-        })
-        
-        
+        });
+    
+
         wrapper.appendChild(backButton);
+        wrapper.appendChild(exportButton);
+        wrapper.appendChild(importButton);
+        wrapper.appendChild(watchButton);
         background.appendChild(headText);
         background.appendChild(container);
         background.appendChild(wrapper);
         ui.appendChild(background);
     }
+
 }
 
 const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
@@ -35164,6 +35324,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 return i.push(n, !0),
                 BA(i.result)
             }
+
+        
+            
             toExportString(e) {
                 const t = (new TextEncoder).encode(e.name);
                 let n, i;
@@ -35230,7 +35393,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 const a = hb(e);
                 return null != a ? a : null
             }
-           static fromExportString(e) {
+            static fromExportString(e) {
                 if (!e) return null;
             
                 if (customCode) {
@@ -35470,6 +35633,122 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
         }
         ;
+        pp4_clipCodes = class {
+             //DORACHAD clipping
+
+            exportClip(e) {
+                const authorBytes = e.author ? new TextEncoder().encode(e.author) : null;
+                const idBytes = new TextEncoder().encode(e.id);
+                const trackBytes = new TextEncoder().encode(e.track);
+                const colorsBytes = new TextEncoder().encode(e.colors);
+                const framesBytes = new TextEncoder().encode(e.frames);
+                const dataBytes = new TextEncoder().encode(e.data);
+            
+                const authorLength = authorBytes ? authorBytes.length : 0;
+            
+                const totalLength =
+                    1 + authorLength +
+                    1 + idBytes.length +
+                    1 + trackBytes.length +
+                    1 + colorsBytes.length +
+                    1 + framesBytes.length +
+                    dataBytes.length;
+            
+                const r = new Uint8Array(totalLength);
+                let offset = 0;
+            
+ 
+                r[offset++] = authorLength;
+                if (authorBytes) { 
+                    r.set(authorBytes, offset); 
+                    offset += authorLength; 
+                }
+            
+
+                r[offset++] = idBytes.length;
+                r.set(idBytes, offset); 
+                offset += idBytes.length;
+            
+
+                r[offset++] = trackBytes.length;
+                r.set(trackBytes, offset); 
+                offset += trackBytes.length;
+            
+
+                r[offset++] = colorsBytes.length;
+                r.set(colorsBytes, offset); 
+                offset += colorsBytes.length;
+            
+
+                r[offset++] = framesBytes.length;
+                r.set(framesBytes, offset); 
+                offset += framesBytes.length;
+            
+                r.set(dataBytes, offset);
+            
+                const s = new Yg.Deflate({ level: 9, windowBits: 9, memLevel: 9 });
+                s.push(r, true);
+                const deflated = BA(s.result);
+            
+                const l = new Yg.Deflate({ level: 9, windowBits: 15, memLevel: 9 });
+                l.push(deflated, true);
+            
+                return "ClipsPP4" + BA(l.result);
+            }
+
+            
+            importClip(encodedString) {
+                if (!encodedString.startsWith("ClipsPP4")) return null;
+
+                const n = KodubBase64Convert(encodedString.substring(8));
+                if (n == null) return null;
+        
+                const i = new Yg.Inflate({ to: "string" });
+                i.push(n, true);
+                if (i.err) return null;
+        
+                const r = i.result;
+                if (typeof r !== "string") return null;
+        
+                const a = KodubBase64Convert(r);
+                if (a == null) return null;
+        
+                const s = new Yg.Inflate();
+                s.push(a, true);
+                if (s.err) return null;
+        
+                const o = s.result;
+                if (!(o instanceof Uint8Array)) return null;
+
+                let offset = 0;
+                
+                const readField = () => {
+                    const len = o[offset++];
+                    const value = o.subarray(offset, offset + len);
+                    offset += len;
+                    return new TextDecoder().decode(value);
+                };
+                
+                const author = readField();
+                const id = readField();
+                const track = readField();
+                const colors = readField();
+                const frames = readField();
+                
+                const dataBytes = o.subarray(offset);
+                const data = new TextDecoder().decode(dataBytes);
+                
+                return { author, id, track, colors, frames, data };
+
+            }
+
+
+
+
+
+            //
+
+        }
         window.decodeTrackFromExportString = TrackData.fromExportString;
         var Mb, Tb, _b, Cb, sunDirectionM, Ib, Rb, Lb, Db, Nb, Bb, Ub, zb, Ob, Fb, set = function(e, t, n, i, r) {
             if ("m" === i)
@@ -37089,7 +37368,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 set(this, loadIntoTrack1, loadIntoTrack, "f"),
 
                 forceLoadTrack = loadIntoTrack;
-
+                
                 set(this, Mk, document.createElement("div"), "f"),
                 get(this, Mk, "f").className = "hidden",
                 e.appendChild(get(this, Mk, "f"));
@@ -37295,7 +37574,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 get(this, yk, "f").addRecordChangedCallback(set(this, Hk, ( () => {
                     this.refresh()
                 }
-                ), "f"))
+                ), "f"));
             }
             dispose() {
                 var e;
@@ -41983,7 +42262,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         const AP = class {
             constructor(e, t, n, i, r, a, s, o, l, c, h, dialogueBox, u, environment, trackData, trackCategory, recordingList, v, w, exitTrackCallback, A) {
                 globalCarManagerReference = this,
-
+                    
                 carFunctions.add(this),
                 carSimulationManager.set(this, void 0),
                 AC.set(this, void 0),
@@ -45131,9 +45410,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 s,
                 !1,
                 ( () => {       // callback for exiting track selection screen to the main menu
-                    get(this, trackSelectionScreen, "f").hide(),
-                    get(this, FL, "m", showMainMenu).call(this),
-                    get(this, FL, "m", showPolytrackLogo).call(this)
+
+                    get(this, trackSelectionScreen, "f").hide();
+                    get(this, FL, "m", showMainMenu).call(this);
+                    get(this, FL, "m", showPolytrackLogo).call(this);
                 } ),
                 ( (metadata, trackData, trackCategory, trackId, trackPreviewCanvas2, loadingRanked=false, quickLoad=false) => {
                     window.multiplayerClient.inRankedMatch = loadingRanked;
@@ -53830,140 +54110,174 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 console.error(e)
             }
             ));
-            const p = new ZB(c)
-              , languageObject = new LanguageObject(p.getSetting($o.Language))
-              , m = new gL(c)
-              , g = new HB;
+            const p = new ZB(c),
+                languageObject = new LanguageObject(p.getSetting($o.Language)),
+                m = new gL(c),
+                g = new HB;
+            
             m.syncUserProfile(g);
-            const v = new yN(c,g,m)
-              , w = document.getElementById("screen")
-              , y = new Au(w,p)
-              , A = new rB(y,p,e)
-              , b = new MountainGenerator2(y)
-              , x = new jb(y,p,o)
-              , k = new LN(e,c)
-              , fpsCounter = new FPSCounter
-              , dialogueBox = new DialogueBox(audioContext2)
-              , M = new JO
-              , T = t => {
-                i.trigger(( () => {
-                    X_(),
-                    Z_(),
-                    L.dispose(),
-                    L = new BD(h,x,b,A,k,languageObject,dialogueBox,m,v,y,audioContext2,c,p,g,e,t,_,C,loadCarIntoTrack5,ejioajfioajef,R),
-                    J_()
-                }
-                ))
-            }
-              , _ = () => {
-                i.trigger(( () => {
-                    X_(),
-                    Z_(),
-                    L.dispose(),
-                    L = new pA(languageObject,x,b,A,y,audioContext2,m,p,g,dialogueBox,( () => {
-                        T(!1)
-                    }
-                    )),
-                    J_()
-                }
-                ))
-            }
-              , C = () => {
-                i.trigger(( () => {
-                    Z_(),
-                    L.dispose();
-                    const t = L = new FM(x,o,c,b,A,languageObject,audioContext2,y,p,i,m,v,k,dialogueBox,M,( () => {
-                        X_(),
-                        Z_(),
-                        L.dispose(),
-                        L = new BD(h,x,b,A,k,languageObject,dialogueBox,m,v,y,audioContext2,c,p,g,e,!1,_,C,loadCarIntoTrack5,ejioajfioajef,R),
-                        J_()
-                    }
-                    ),( (e, n, i) => {
-                        const s = L = new AP(h,d,x,b,A,languageObject,y,audioContext2,m,p,r,dialogueBox,M,e,n,"custom",[],null,( () => {}
-                        ),( () => {     // exit track function
-                            q_(),
-                            s.dispose(!1),
-                            L = t,
-                            i()
+            
+            const v = new yN(c, g, m),
+                w = document.getElementById("screen"),
+                y = new Au(w, p),
+                A = new rB(y, p, e),
+                b = new MountainGenerator2(y),
+                x = new jb(y, p, o),
+                k = new LN(e, c),
+                fpsCounter = new FPSCounter,
+                dialogueBox = new DialogueBox(audioContext2),
+                M = new JO,
+                T = t => {
+                    i.trigger(() => {
+                        X_();
+                        Z_();
+                        L.dispose();
+                        L = new BD(
+                            h, x, b, A, k, languageObject, dialogueBox, m, v, y,
+                            audioContext2, c, p, g, e, t, _, C,
+                            loadCarIntoTrack5, ejioajfioajef, R
+                        );
+                        J_();
+                    });
+                },
+                _ = () => {
+                    i.trigger(() => {
+                        X_();
+                        Z_();
+                        L.dispose();
+                        L = new pA(
+                            languageObject, x, b, A, y, audioContext2, m, p, g,
+                            dialogueBox, () => {
+                                T(!1);
+                            }
+                        );
+                        J_();
+                    });
+                },
+                C = () => {
+                    i.trigger(() => {
+                        Z_();
+                        L.dispose();
+                        const t = L = new FM(
+                            x, o, c, b, A, languageObject, audioContext2, y, p, i, m, v,
+                            k, dialogueBox, M,
+                            () => {
+                                X_();
+                                Z_();
+                                L.dispose();
+                                L = new BD(
+                                    h, x, b, A, k, languageObject, dialogueBox, m, v, y,
+                                    audioContext2, c, p, g, e, !1, _, C,
+                                    loadCarIntoTrack5, ejioajfioajef, R
+                                );
+                                J_();
+                            },
+                            (e, n, i) => {
+                                const s = L = new AP(
+                                    h, d, x, b, A, languageObject, y, audioContext2, m,
+                                    p, r, dialogueBox, M, e, n, "custom", [], null,
+                                    () => {},
+                                    () => {
+                                        // exit track function
+                                        q_();
+                                        s.dispose(!1);
+                                        L = t;
+                                        i();
+                                    },
+                                    null
+                                );
+                            }
+                        );
+                        J_();
+                        t.isPaused = !0;
+                        eC(() => {
+                            audioContext2.mute();
+                        }, "start-editor").finally(() => {
+                            q_();
+                            audioContext2.unmute();
+                            t.isPaused = !1;
+                        });
+                    });
+                },
+                loadCarIntoTrack5 = (environment, trackData, trackCategory, recordingList) => {
+                    i.trigger(() => {
+            
+                        // Normal flow
+                        Z_();
+                        L.dispose();
+            
+                        const i = m.profileSlot;
+                        const o = v.getRecordTime(i, trackData.getId());
+                        const l = L = new AP(
+                            h, d, x, b, A, languageObject, y, audioContext2, m, p, r,
+                            dialogueBox, M, environment, trackData, trackCategory,
+                            recordingList, o,
+                            (e, t, n) => {
+                                if (e != null) {
+                                    const r = v.getRecordTime(i, e);
+                                    if (r == null || n.lessThan(r)) v.setRecord(i, e, n, t);
+                                }
+                            },
+                            () => {
+                                multiplayerEnabled = false;
+                                joiningServer = false;
+                                customCode = false;
+                                PP4_stats.stopTiming();
+                                T(true);
+                            },
+                            ejioajfioajef
+                        );
+
+                        //DORACHAD clipping
+                        if (watchingClipFlag) {
+                            L.dispose();
+
+                            L = new BD(
+                                h, x, b, A, k, languageObject, dialogueBox, m, v, y,
+                                audioContext2, c, p, g, e, t, _, C,
+                                loadCarIntoTrack5, ejioajfioajef, R
+                            );
+
+                            watchingClipFlag = false;
                         }
-                        ),null)
-                    }
-                    ));
-                    return J_(),
-                    t.isPaused = !0,
-                    eC(( () => {
-                        audioContext2.mute()
-                    }
-                    ), "start-editor").finally(( () => {
-                        q_(),
-                        audioContext2.unmute(),
-                        t.isPaused = !1
-                    }
-                    ))
-                }
-                ))
-            }
-              , loadCarIntoTrack5 = (environment, trackData, trackCategory, recordingList) => {   // important - root loading of track
-                i.trigger(( () => {
-                    
-                    Z_(),
-                    L.dispose();
-                    const i = m.profileSlot
-                      , o = v.getRecordTime(i, trackData.getId())
-                      , l = L = new AP(h,d,x,b,A,languageObject,y,audioContext2,m,p,r,dialogueBox,M,environment,trackData,trackCategory,recordingList,o,( (e, t, n) => {
-                        if (null != e) {
-                            const r = v.getRecordTime(i, e);
-                            (null == r || n.lessThan(r)) && v.setRecord(i, e, n, t)
-                        }
-                    }
-                    ),( () => {
-                          //DORACHAD
-                        multiplayerEnabled = false;
-                        joiningServer = false;
-                        customCode = false;
-                        PP4_stats.stopTiming();
-                          //
-                        T(!0)
-                    }
-                    ),ejioajfioajef);
-                    return J_(),
-                    l.isPaused = !0,
-                    eC(( () => {
-                        audioContext2.mute()
-                    }
-                    ), "start-game").finally(( () => {
-                        audioContext2.unmute(),
-                        l.isPaused = !1
-                    }
-                    ))
-                }
-                ))
-            }
-              , ejioajfioajef = (e, t, n, r) => {
-                i.trigger(( () => {
-                    Z_(),
-                    L.dispose(),
-                    L = new YO(d,x,e,t,n,b,A,y,audioContext2,languageObject,p,r,loadCarIntoTrack5),
-                    J_(),
-                    q_()
-                }
-                ))
-            }
-              , R = t => {
-                i.trigger(( () => {
-                    Z_(),
-                    L.dispose(),
-                    L = new iz(audioContext2,y,g,k,o,p,e,t,( () => {
-                        T(!1)
-                    }
-                    )),
-                    J_(),
-                    q_()
-                }
-                ))
-            }
-            ;
+                        //
+            
+                        J_();
+                        l.isPaused = true;
+            
+                        eC(() => audioContext2.mute(), "start-game").finally(() => {
+                            audioContext2.unmute();
+                            l.isPaused = false;
+                        });
+                    });
+                },
+                ejioajfioajef = (e, t, n, r) => {
+                    i.trigger(() => {
+                        Z_();
+                        L.dispose();
+                        L = new YO(
+                            d, x, e, t, n, b, A, y, audioContext2,
+                            languageObject, p, r, loadCarIntoTrack5
+                        );
+                        J_();
+                        q_();
+                    });
+                },
+                R = t => {
+                    i.trigger(() => {
+                        Z_();
+                        L.dispose();
+                        L = new iz(
+                            audioContext2, y, g, k, o, p, e, t,
+                            () => {
+                                T(!1);
+                            }
+                        );
+                        J_();
+                        q_();
+                    });
+                };
+
             let L = new BD(h,x,b,A,k,languageObject,dialogueBox,m,v,y,audioContext2,c,p,g,e,!1,_,C,loadCarIntoTrack5,ejioajfioajef,R)
               , D = 0;
             y.setAnimationLoop((function(e) {
