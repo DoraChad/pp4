@@ -3115,7 +3115,7 @@ PP4_ui.initInfoLogs();
     }
 })();
 
-const gameCode = function() {
+( () => {
     var e = {
         77: (e, t, n) => {
             "use strict";
@@ -54443,5 +54443,4 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
     }
     )()
 }
-
-PP4_ui.password(gameCode);
+)();
