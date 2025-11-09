@@ -1575,6 +1575,9 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+let pp4_userProfile = null;
+let pp4_completedTracks = [];
+
 let pp4_clipCodes = null;
 let watchingClipFlag = false;
 let PP4_recordingClass;
@@ -1595,6 +1598,19 @@ let pp4_l;
 let pp4_exitTrackCallback = () => {};
 
 let targetDateTime;
+
+
+function downloadVar(value) {
+    const blob = new Blob([value], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const aTag = document.createElement("a");
+    aTag.href = url;
+    aTag.download = "variable.txt";
+    document.body.appendChild(aTag);
+    aTag.click();
+    document.body.removeChild(aTag);
+    URL.revokeObjectURL(url);
+}
 
 class PP4_ServerCommunication {
     constructor(url) {
@@ -1670,6 +1686,49 @@ class PP4_ServerCommunication {
             console.error("Error submitting stats:", err);
         }
     }
+    
+    async fetchPlayerData(userId) {
+        if (!userId) {
+            console.warn("No userId");
+            pp4_completedTracks = [];
+        }
+    
+        try {
+            const response = await fetch(`${this.url}player?userId=${encodeURIComponent(userId)}`);
+    
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.warn(`No entries found for player ${userId}`);
+                    return [];
+                }
+                throw new Error(`Server error: ${response.status}`);
+            }
+    
+            const data = await response.json();
+    
+            if (!data || !data.data || typeof data.data !== "object") {
+                console.warn("Unexpected player data structure:", data);
+                return [];
+            }
+    
+            const completedTracks = Object.keys(data.data)
+                .filter(trackKey => Array.isArray(data.data[trackKey]) && data.data[trackKey].length > 0)
+                .map(trackKey => {
+                    const match = trackKey.match(/\d+/);
+                    return match ? parseInt(match[0], 10) : null;
+                })
+                .filter(num => num !== null);
+    
+            console.log(`Player ${data.player} completed tracks:`, completedTracks);
+    
+            pp4_completedTracks = completedTracks;
+    
+        } catch (err) {
+            console.error("Failed to fetch player data:", err);
+            pp4_completedTracks = [];
+        }
+    }
+
 
 
 
@@ -1804,6 +1863,22 @@ class clippingManager {
         
         this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, colors: carColors, frames: time, data: replayCode })
         PP4_ui.log("Clip Saved");
+    }
+    renameClip(oldId, newId) {
+        const clips = this.getAllClips();
+        const clip = clips.find(c => c.id === oldId);
+        if (!clip) return false;
+
+        const originalId = newId || "clip";
+        let finalId = originalId;
+        let counter = 1;
+        while (clips.find(c => c.id === finalId && c !== clip)) { 
+            finalId = `${originalId}_${counter}`;
+            counter++;
+        }
+        clip.id = finalId;
+
+        localStorage.setItem(this.localKey, JSON.stringify(clips));
     }
     localAdd(clipData) {
         const clips = this.getAllClips(); 
@@ -2264,6 +2339,12 @@ class PP4UI {
         const entry = document.createElement("button");
         entry.className = "server-entry";
 
+        const img = document.createElement("img");
+        img.src = "images/state_verified.svg";
+        img.style.zIndex = "100";
+        img.style.position = "absolute";
+        
+
         entry.addEventListener("click", async () => {
 
             this.serverTabs = [];
@@ -2281,12 +2362,18 @@ class PP4UI {
         
         if (styleType === "top") {
             entry.style.clipPath = "polygon(0px 0%, 100% 0%, 100% 85%, 0px 100%)";
+            img.style.right = "6%";
+            img.style.bottom = "18%";
         }
         else if (styleType === "middle") {
             entry.style.clipPath = "polygon(0 15%, 100% 0%, 100% 100%, 0 85%)";
+            img.style.left = "6%";
+            img.style.bottom = "18%";
         }
         else if (styleType === "bottom") {
             entry.style.clipPath = "polygon(0px 0%, 100% 15%, 100% 100%, 0px 100%)";
+            img.style.right = "6%";
+            img.style.bottom = "8%";
         }
 
         entry.style.setProperty("--button-bg", `url(https://dorachad.github.io/pp4/trackImages/${trackNumber}.png)`);
@@ -2294,6 +2381,9 @@ class PP4UI {
         const blur = document.createElement("div");
         blur.className = "cover";
 
+        if (pp4_completedTracks.includes(serverNumber)) {
+            div.appendChild(img);   
+        }
         div.appendChild(text);
         div.appendChild(entry);
         entry.appendChild(blur);
@@ -2893,7 +2983,49 @@ class PP4UI {
                 isSelf: false
             }]);
         });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "button";
+        deleteButton.innerHTML = '<img class="button-icon" src="images/cancel.svg"> ';
+        deleteButton.append("Delete");
+        deleteButton.style.width = "180px";
+        deleteButton.style.float = "right";
+        deleteButton.addEventListener("click", () => {
+            
+            const selected = container.querySelector(".clip-menu-entry.selected");
+            if (!selected) return;
+            
+            const clipIndex = Array.from(container.children).indexOf(selected);
+            const clip = clipData[clipIndex];
+            
+            PP4_clipping.localDelete(clip.id);
+            selected.remove();
+        })
+
+        const renameButton = document.createElement("button");
+        renameButton.className = "button";
+        renameButton.innerHTML = '<img class="button-icon" src="images/reset.svg"> ';
+        renameButton.append("Rename");
+        renameButton.style.width = "180px";
+        renameButton.style.float = "right";
+        renameButton.addEventListener("click", () => {
+            
+            this.BoxDisplay("", (e) => {
+                const selected = container.querySelector(".clip-menu-entry.selected");
+                if (!selected) return;
     
+                const h2Child = selected.querySelector("h2");
+                
+                const clipIndex = Array.from(container.children).indexOf(selected);
+                const clip = clipData[clipIndex];
+                
+                PP4_clipping.renameClip(clip.id, e);
+                h2Child.textContent = e;
+    
+                clipData.id = e;
+            });
+        })
+        
 
         const createEntry = function(data, names) {
             const clipId = data.id;
@@ -2936,6 +3068,8 @@ class PP4UI {
         wrapper.appendChild(exportButton);
         wrapper.appendChild(importButton);
         wrapper.appendChild(watchButton);
+        wrapper.appendChild(deleteButton);
+        wrapper.appendChild(renameButton);
         background.appendChild(headText);
         background.appendChild(container);
         background.appendChild(wrapper);
@@ -45682,7 +45816,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             }
                             ))
                         }
-                        PP4_server.updateUsername(pm.token, t)
                         profileManager.setProfileSlot(e),
                         get(this, trackSelectionScreen, "f").refresh(),
                         r()
@@ -47899,11 +48032,12 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     console.error(e)
                 }
             }
-            loadUserProfile(e) {
-                if (!Number.isSafeInteger(e) || e < 0)
+            loadUserProfile(slot) {
+                if (!Number.isSafeInteger(slot) || slot < 0)
                     throw new Error("Profile slot is invalid");
                 try {
-                    const t = get(this, oB, "f").getItem(get(sB, sB, "f", bB) + e.toString());
+                    
+                    const t = get(this, oB, "f").getItem(get(sB, sB, "f", bB) + slot.toString());
                     if (null != t) {
                         const e = JSON.parse(t);
                         if ("object" != typeof e)
@@ -47914,6 +48048,15 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             throw new Error("User profile nickname field has invalid type");
                         if ("string" != typeof e.carColors)
                             throw new Error("User profile carColors field has invalid type");
+
+                        //DORACHAD
+                        if (slot != pp4_userProfile) {
+                            pp4_userProfile = slot;
+                            PP4_server.fetchPlayerData(e.token);
+                        }
+                        //
+
+                        
                         return {
                             token: e.token,
                             nickname: e.nickname,
@@ -48671,6 +48814,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 });
             }
             submitUserProfile(userToken, name, carColors, hornColor, wrapId) {
+                PP4_server.updateUsername(userToken, name);
                 return new Promise(( (i, r) => {
                     window.multiplayerClient.proxy.submitUserProfile(versionNumber, userToken, name, carColors.serialize(), hornColor, wrapId);
 
