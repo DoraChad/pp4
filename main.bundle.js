@@ -2381,9 +2381,9 @@ class PP4UI {
         const blur = document.createElement("div");
         blur.className = "cover";
 
-        if (pp4_completedTracks.includes(serverNumber)) {
-            div.appendChild(img);   
-        }
+        //if (pp4_completedTracks.includes(serverNumber)) {
+        //    div.appendChild(img);   
+       // }
         div.appendChild(text);
         div.appendChild(entry);
         entry.appendChild(blur);
@@ -48799,7 +48799,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                         replayId: t,
                                         userId: userToken,
                                         name: username,
-                                        track: `track${trackNumber}`
+                                        track: `track${trackNumber}`,
+                                        frames: recordingTime
                                     };
                                     
                                     PP4_server.submitRun(playerData);
