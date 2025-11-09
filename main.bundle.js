@@ -48800,7 +48800,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                         userId: userToken,
                                         name: username,
                                         track: `track${trackNumber}`,
-                                        frames: recordingTime
+                                        frames: recordingTime.numberOfFrames
                                     };
                                     
                                     PP4_server.submitRun(playerData);
