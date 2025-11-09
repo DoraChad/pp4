@@ -1736,19 +1736,19 @@ class PP4_ServerCommunication {
     async fetchFullLeaderboard() {  
         try {
             const response = await fetch(`${this.url}full-leaderboard`);
-    
+            
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
             }
     
             const data = await response.json();
-            // data.leaderboard is an array of players
-            return data.leaderboard;
+            return data; // <-- not data.leaderboard
         } catch (err) {
             console.error("Failed to fetch leaderboard:", err);
-            return [];
+            return {};
         }
     }
+
 
 }
 class playerStats {
@@ -2363,9 +2363,10 @@ class PP4UI {
         ct.innerHTML = "";
     
         try {
-            const playerListArray = await PP4_server.fetchFullLeaderboard(); 
+            const playerListArray = await PP4_server.fetchFullLeaderboard();
+            const players = Object.values(playerListArray).flat(); 
     
-            playerListArray.forEach((player, index) => {
+            players.forEach((player, index) => {
                 // per player
                 const lbc = document.createElement("div");
                 lbc.className = "playerSpot";
@@ -2419,15 +2420,19 @@ class PP4UI {
                 rgh.style.flexDirection = "column";
                 rgh.style.marginLeft = "auto";
                 rgh.style.padding = "5%";
-    
+
+                const completed = player.tracksCompleted ?? 0;
+                const avgPlace = player.avgPlacement != null ? player.avgPlacement.toFixed(2) : "—";
+
+                
                 const hh4 = document.createElement("p");
-                hh4.textContent = `Completed: ${player.tracksCompleted}`;
+                hh4.textContent = `Completed: ${completed}`;
                 hh4.style.padding = "10px";
                 hh4.style.fontSize = "25px";
                 hh4.style.margin = "0";
     
                 const hh5 = document.createElement("p");
-                hh5.textContent = `Avg. Place: ${player.avgPlacement.toFixed(2)}`;
+                hh5.textContent = `Avg. Place: ${avgPlace}`;
                 hh5.style.padding = "10px";
                 hh5.style.fontSize = "25px";
                 hh5.style.margin = "0";
