@@ -33,7 +33,7 @@ async function checkVersion() {
         message.style.top = 0;
 
         const text = document.createElement("div");
-        text.textContent = `Client version (${CLIENT_VERSION}) is outdated. Will reload at ${forceReloadAfter.toISOString()}`
+        text.textContent = `Client version (${CLIENT_VERSION}) is outdated. Will reload at ${forceReloadAfter.toLocaleString()}`;
         text.style.margin = "10px";
         
         message.appendChild(text);
@@ -1997,6 +1997,10 @@ class clippingManager {
         const replayCode = PP4_recordingClass.getRecording().serialize()
         const carColors = pp4_carColorDeserializer2.serialize(PP4_recordingClass.getColors());
         const time = PP4_recordingClass.getTime().numberOfFrames;
+
+        if (!replayCode) {
+            time = PP4_recordingClass.getFinishTime().numberOfFrames;
+        }
         
         this.localAdd({ id: "", track: trackNumber, author: window.multiplayerClient.username, colors: carColors, frames: time, data: replayCode })
         PP4_ui.log("Clip Saved");
@@ -3228,6 +3232,7 @@ const PP4_stats = new playerStats();
 const PP4_clipping = new clippingManager();
 
 PP4_ui.initInfoLogs();
+
 (async () => {
     const result = await PP4_server.checkConnection();
 
@@ -46023,6 +46028,11 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             const currentProfile = profileManager.getCurrentUserProfile();
             window.multiplayerClient.setTokens(currentProfile.token, currentProfile.tokenHash);
 
+
+            window.multiplayerClient.setUsername(currentProfile.nickname);
+            window.multiplayerClient.setCarColors(currentProfile.carColors);
+            window.multiplayerClient.updatePlayerData();
+            
             const playRankedButton = document.createElement("button"); // cwcinc - ranked button
             playRankedButton.className = "button button-image ranked-button",
             playRankedButton.innerHTML = '<img src="images/trophy.svg">',
@@ -48940,7 +48950,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                     
                                     const playerData = {
                                         replayId: t,
-                                        userId: userToken,
+                                        userId: pp_User.getCurrentUserProfile().tokenHash,
                                         name: username,
                                         track: `track${trackNumber}`,
                                         frames: recordingTime.numberOfFrames
