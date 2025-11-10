@@ -2231,10 +2231,12 @@ class PP4UI {
         .top-right-hud > p {
             color: white;
             font-size: 50px;
+            position: absolute;
+            right: 0;
             margin: 20px;
         }
         .top-right-hud {
-            position: absolute;
+            position: relative;
             top: 0;
             right: 0;
         }
@@ -2519,9 +2521,9 @@ class PP4UI {
         const blur = document.createElement("div");
         blur.className = "cover";
 
-        //if (pp4_completedTracks.includes(serverNumber)) {
-        //    div.appendChild(img);   
-       // }
+        if (pp4_completedTracks.includes(serverNumber)) {
+            div.appendChild(img);   
+        }
         div.appendChild(text);
         div.appendChild(entry);
         entry.appendChild(blur);
@@ -2962,6 +2964,16 @@ class PP4UI {
 
         this.serverTimer = document.createElement("p");
         this.HUDtimer.appendChild(this.serverTimer);
+
+        const nextTrack = document.createElement("p");
+        nextTrack.textContent = `Next Track: ${this.trackNames[this.getServerNumber(this.userServerNumber * 8) + 1]}`
+        nextTrack.style.fontSize = "20px";
+        nextTrack.style.position = "absolute";
+        nextTrack.style.left = "0";
+        nextTrack.style.top = "60px";
+        
+        
+        this.HUDtimer.appendChild(nextTrack)
     
         ui.appendChild(this.HUDtimer);
     
@@ -3228,6 +3240,68 @@ class PP4UI {
 
 }
 
+
+async function retryCachedSubmissionsOnLaunch(baseUrl) {
+    const CACHE_KEY = "pendingSubmissions";
+
+    const getCached = () => {
+        try {
+            return JSON.parse(localStorage.getItem(CACHE_KEY)) || [];
+        } catch {
+            return [];
+        }
+    };
+
+    const saveCache = (list) => {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(list));
+    };
+
+    const fetchWithTimeout = (url, options, timeout = 5000) => {
+        return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout")), timeout)
+            ),
+        ]);
+    };
+
+    const cached = getCached();
+    if (cached.length === 0) {
+        console.log("No cached submissions to retry.");
+        return;
+    }
+
+    const remaining = [];
+
+    for (const item of cached) {
+        try {
+            const res = await fetchWithTimeout(`${baseUrl}submit`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(item.payload),
+            });
+
+            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
+            console.log(` ${item.id} was removed from cache`);
+            // success → not added to remaining
+        } catch (err) {
+            console.warn(`${item.id} failed:`, err);
+            remaining.push(item, ...cached.slice(cached.indexOf(item) + 1));
+            break;
+        }
+    }
+
+    saveCache(remaining);
+
+    if (remaining.length === 0) {
+        console.log("cache cleared");
+    } else {
+        console.log(`${remaining.length} left`);
+    }
+}
+
+
 const PP4_server = new PP4_ServerCommunication("https://polytrack.pythonanywhere.com/");
 const PP4_ui = new PP4UI();
 const PP4_stats = new playerStats();
@@ -3241,6 +3315,7 @@ PP4_ui.initInfoLogs();
     switch (result.status) {
         case "online":
             PP4_ui.log("Connected to Servers");
+            retryCachedSubmissionsOnLaunch("https://polytrack.pythonanywhere.com/");
             break;
         case "waking":
             PP4_ui.errorPopup(
@@ -35716,7 +35791,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             
                     const u = fromByteArray(1 + l + 1 + h, o);
                     if (u == null) return null;
-            
+
+                    
                     return { trackMetadata: { name: c, author: d }, trackData: u };
                 }
             
@@ -45316,6 +45392,14 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 return get(this, currentUserProfile, "f").clone()
             }
             getUserProfile(e) {
+
+                //DORACHAD
+                if (e != pp4_userProfile) {
+                    pp4_userProfile = e;
+                    PP4_server.fetchPlayerData(this.getCurrentUserProfile().tokenHash);
+                }
+                //
+                
                 if (e == get(this, cL, "f"))
                     return this.getCurrentUserProfile();
                 {
@@ -48207,12 +48291,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                         if ("string" != typeof e.carColors)
                             throw new Error("User profile carColors field has invalid type");
 
-                        //DORACHAD
-                        if (slot != pp4_userProfile) {
-                            pp4_userProfile = slot;
-                            PP4_server.fetchPlayerData(e.token);
-                        }
-                        //
+
 
                         
                         return {
