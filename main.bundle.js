@@ -1998,7 +1998,7 @@ class clippingManager {
         const carColors = pp4_carColorDeserializer2.serialize(PP4_recordingClass.getColors());
         const time = PP4_recordingClass.getTime().numberOfFrames;
 
-        if (!replayCode) {
+        if (!time) {
             time = PP4_recordingClass.getFinishTime().numberOfFrames;
         }
         
@@ -2595,7 +2595,7 @@ class PP4UI {
 
             players.forEach((player, index) => {
                 // per player
-                const lbc = document.createElement("div");
+                const lbc = document.createElement("button");
                 lbc.className = "playerSpot";
                 lbc.style.margin = "10px 10px 0 10px";
                 lbc.style.padding = "0";
@@ -2609,6 +2609,8 @@ class PP4UI {
                 lbc.style.color = "white";
                 lbc.style.display = "flex";
                 lbc.style.alignItems = "center";
+                lbc.style.border = "none";
+                lbc.style.cursor = "pointer";
                 lbc.id = player.userId;
     
                 // rank
@@ -31027,9 +31029,8 @@ PP4_ui.initInfoLogs();
         };
         class VisualCar {
             constructor(e, startTransform, n, i, r, a, s, o, l, carWrapId=0) {
-                
-                //DORACHAD clipping
-                PP4_recordingClass = this;
+
+                console.log(e, startTransform, n, i, r, a, s, o, l, carWrapId=0);
                 
                 var c;
                 if (AudioFunctions.add(this),
@@ -42125,6 +42126,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         dP = function(e) {
             var t, n, i, r, a, s, o, l, c;
             if (e) {
+                
                 const e = get(this, carFunctions, "m", mP).call(this);
                 set(this, OC, new mT(get(this, EC, "f"),get(this, IC, "f"),get(this, settingsManager, "f")), "f"),
                 set(this, FC, new vC(get(this, EC, "f"),get(this, settingsManager, "f")), "f"),
@@ -42325,7 +42327,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             null === (t = get(this, mainTimerObject, "f")) || void 0 === t || t.hideCheckpointTime(),
             get(this, controlCar, "f").reset = !1,
             set(this, ZC, !1, "f"),
-            set(this, $C, null, "f")
+            set(this, $C, null, "f");
+                
+            //DORACHAD clipping
+            PP4_recordingClass = get(this, primaryCar, "f");
         }
         ,
         initMultiplayerCars = function() {
