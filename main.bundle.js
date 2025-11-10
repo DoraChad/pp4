@@ -2965,15 +2965,15 @@ class PP4UI {
         this.serverTimer = document.createElement("p");
         this.HUDtimer.appendChild(this.serverTimer);
 
-        const nextTrack = document.createElement("p");
-        nextTrack.textContent = `Next Track: ${this.trackNames[this.getServerNumber(this.userServerNumber * 8) + 1]}`
-        nextTrack.style.fontSize = "20px";
-        nextTrack.style.position = "absolute";
-        nextTrack.style.left = "0";
-        nextTrack.style.top = "60px";
+        this.nextTrack = document.createElement("p");
+        this.nextTrack.textContent = `Next Track: ${this.trackNames[this.getServerNumber(this.userServerNumber * 8) + 1]}`
+        this.nextTrack.style.fontSize = "20px";
+        this.nextTrack.style.position = "absolute";
+        this.nextTrack.style.left = "0";
+        this.nextTrack.style.top = "60px";
         
         
-        this.HUDtimer.appendChild(nextTrack)
+        this.HUDtimer.appendChild(this.nextTrack)
     
         ui.appendChild(this.HUDtimer);
     
@@ -2984,6 +2984,7 @@ class PP4UI {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
         }
+        this.nextTrack?.remove();
         this.HUDtimer?.remove();
     }
     BoxDisplay(content, importFunc = null) {
