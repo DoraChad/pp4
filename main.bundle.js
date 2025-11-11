@@ -2965,6 +2965,9 @@ class PP4UI {
         this.serverTimer = document.createElement("p");
         this.HUDtimer.appendChild(this.serverTimer);
 
+        if (this.nextTrack) {
+            this.nextTrack.remove();
+        }
         this.nextTrack = document.createElement("p");
         this.nextTrack.textContent = `Next Track: ${this.trackNames[this.getServerNumber(this.userServerNumber * 8) + 1]}`
         this.nextTrack.style.fontSize = "20px";
