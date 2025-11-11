@@ -1717,6 +1717,16 @@ class PP4_ServerCommunication {
         });
     }
 
+    async getTrackRuns(trackNumber) {
+        const response = await fetch(`${this.url}track?track=track${trackNumber}`);
+        if (!response.ok) {
+            console.error("Failed to fetch track runs");
+            return null;
+        }
+        const data = await response.json();
+        return data.runs || [];
+    }
+
     async submitRun(playerData) {
         console.log(playerData);
     
@@ -2240,6 +2250,21 @@ class PP4UI {
             top: 0;
             right: 0;
         }
+        .next-track {
+            font-size: 20px;
+            position: absolute;
+            left: 0;
+            top: 60px;
+            opacity: 0;
+        }
+        .next-track.visible {
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 0.2s 
+            ease-in-out 0.5s, transform 0.2s 
+            ease-in-out 0.5s;
+            pointer-events: auto;
+        }
         .box-message {
             position: absolute;
             left: calc(50% - 80% / 2);
@@ -2290,7 +2315,7 @@ class PP4UI {
         document.body.appendChild(div);
     }
     captureUsers(users) {
-        console.log(users);
+        //console.log(users);
         this.previousPlayers = users;
     }
     pbPopup(users) {
@@ -2497,6 +2522,8 @@ class PP4UI {
             const code = await PP4_server.getTrackCode(trackNumber);
             forceLoadTrackByCode(code);
 
+            this.CreateSideLeaderboard(await PP4_server.getTrackRuns(trackNumber));
+            
             PP4_stats.startTiming();
         });
         
@@ -2533,6 +2560,34 @@ class PP4UI {
 
         this.serverTabs.push(div);
     }
+
+    CreateSideLeaderboard(data) {
+
+        let allData;
+        function findRunByUser(runs, userId) {
+            return runs.find(r => r.userId === userId) || null;
+        }
+        
+        const userRun = findRunByUser(data, pp_User.getCurrentUserProfile().tokenHash);
+
+        if (userRun) {
+            const topRuns = data.slice(0, 3);
+
+            userRun.position - 1
+
+            if (userRun > 5) {                    
+                allData = [...topRuns, ...userRun]
+            } else {
+                allData = data.slice(0, 5);
+            }
+
+        } else {
+            allData = data.slice(0, 5);
+        }
+        
+        console.log(allData);
+    }
+    
     createCountdown(parent) {
         const countdownDiv = document.createElement("div");
         countdownDiv.className = "countdown";
@@ -2968,12 +3023,20 @@ class PP4UI {
         if (this.nextTrack) {
             this.nextTrack.remove();
         }
+
+        function mod25(num) {
+            if (typeof num !== 'number' || isNaN(num)) {
+                throw new Error("Input must be a valid number");
+            }
+            return ((num - 1) % 25 + 25) % 25 + 1;
+        }
+
+
+        
         this.nextTrack = document.createElement("p");
-        this.nextTrack.textContent = `Next Track: ${this.trackNames[this.getServerNumber(this.userServerNumber * 8) + 1]}`
+        this.nextTrack.className = "next-track visible";
         this.nextTrack.style.fontSize = "20px";
-        this.nextTrack.style.position = "absolute";
-        this.nextTrack.style.left = "0";
-        this.nextTrack.style.top = "60px";
+        this.nextTrack.textContent = `Next Track: ${this.trackNames[mod25(this.getServerNumber(this.userServerNumber * 8) + 1)]}`
         
         
         this.HUDtimer.appendChild(this.nextTrack)
@@ -31108,9 +31171,6 @@ PP4_ui.initInfoLogs();
         };
         class VisualCar {
             constructor(e, startTransform, n, i, r, a, s, o, l, carWrapId=0) {
-
-                console.log(e, startTransform, n, i, r, a, s, o, l, carWrapId=0);
-                
                 var c;
                 if (AudioFunctions.add(this),
                 localAudioManager.set(this, void 0),
@@ -41882,11 +41942,23 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             setWatchButtonEnabled(e) {
                 get(this, B_, "f").disabled = !e
             }
+            //DORACHAD
             setVisible(e) {
-                get(this, U_, "f") != e && (e ? get(this, N_, "f").classList.add("visible") : get(this, N_, "f").classList.remove("visible"),
-                get(this, N_, "f").inert = !e,
-                set(this, U_, e, "f"))
+                if (get(this, U_, "f") !== e) {
+                    if (e) {
+                        get(this, N_, "f").classList.add("visible");
+                        PP4_ui.nextTrack.classList.add("visible");
+                    } else {
+                        get(this, N_, "f").classList.remove("visible");
+                        PP4_ui.nextTrack.classList.remove("visible");
+                    }
+            
+                    get(this, N_, "f").inert = !e;
+                    set(this, U_, e, "f");
+                }
             }
+            //
+
         }
         ;
         var H_, G_ = function(e, t, n, i) {
@@ -43046,6 +43118,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             dispose(e=!0) {
                 // IMPORTANT - called when track is exited
+
+                //DORACHAD
+                PP4_ui.RemoveHUD();
+                
                 if (window.multiplayerClient.currentRoom !== null) {
                     window.multiplayerClient.leaveRoom();
                     window.multiplayerClient.destroyLb();
@@ -48874,6 +48950,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 return new Promise((resolve, reject) => {
                     window.multiplayerClient.proxy.getLeaderboard(versionNumber, userId, trackId, skip, amount, onlyVerified).then(leaderboardData => {
                         // console.log("lbdata", leaderboardData);
+                        if (leaderboardData === null) return;
                         const a = leaderboardData.total;
                         if ("number" != typeof a)
                             return void reject(new Error("Total is not a number"));
