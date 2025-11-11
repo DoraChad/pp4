@@ -1869,6 +1869,11 @@ class PP4_ServerCommunication {
             console.log(`Player ${data.player} completed tracks:`, completedTracks);
     
             pp4_completedTracks = completedTracks;
+            PP4_ui.serverTabs.forEach(e => {
+                if (pp4_completedTracks.includes(PP4_ui.getServerNumber(e[0] * 8))) {
+                    e[1].appendChild(PP4_ui.serverImages[e[0]]);   
+                }
+            })
     
         } catch (err) {
             console.error("Failed to fetch player data:", err);
@@ -2072,6 +2077,7 @@ class PP4UI {
         
         this.serverPlayers = [];
         this.serverTabs = [];
+        this.serverImages = [];
         this.trackNames = {
             1: "Bonk III - The Last Act",
             2: "Primordial Soup",
@@ -2492,7 +2498,7 @@ class PP4UI {
         this.CreateServerEntry(2, "bottom");
     }
     
-    CreateServerEntry(serverNumber, styleType) {
+    async CreateServerEntry(serverNumber, styleType) {
         const trackNumber = this.getServerNumber(serverNumber * 8)
         
         const div = document.createElement("div");
@@ -2548,17 +2554,20 @@ class PP4UI {
         const blur = document.createElement("div");
         blur.className = "cover";
 
-        if (pp4_completedTracks.includes(serverNumber)) {
-            div.appendChild(img);   
-        }
+
+        //if (pp4_completedTracks.includes(trackNumber)) {
+        //    div.appendChild(img);   
+        //}
         div.appendChild(text);
         div.appendChild(entry);
+        
         entry.appendChild(blur);
         
         PP4_main_container.appendChild(div);
         this.serverEntries += 1;
 
-        this.serverTabs.push(div);
+        this.serverImages.push([img])
+        this.serverTabs.push([serverNumber, div]);
     }
 
     CreateSideLeaderboard(data) {
