@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.3";
+const CLIENT_VERSION = "1.0.4";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -217,6 +217,7 @@ function forceLoadMainTrackById(trackId, isRanked=false, quickLoad=false) {
 
 function forceLoadTrackByCode(trackCode) {
     const trackInfo = window.decodeTrackFromExportString(trackCode);
+    window.currentTrackId = window.getTrackId.getId();
     if (!trackInfo) {
         console.error("Invalid track data");
         return;
@@ -35676,6 +35677,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 Ab.set(this, new Map),
                 this.environment = e,
                 set(this, yb, t.clone(), "f");
+
+                //DORACHAD
+                window.getTrackId = this;
+                //
             }
             get sunDirection() {
                 return get(this, yb, "f").clone()
@@ -44511,6 +44516,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         };
         class AR {
             constructor(e, t, n, i, r, a, s, o, l, c, h) {
+                
                 GI.add(this),
                 QI.set(this, void 0),
                 YI.set(this, void 0),
@@ -44897,6 +44903,21 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         ;
         const TrackSelectedMenu = class {
             constructor(e, t, n, i, r, a, s, loadedTrackInfo, l, c, trackPreviewCanvas, d, exitTrackLeaderboardToTrackSelector, p, loadInTrackWithGhosts, m, g) {
+
+                                
+                const err = new Error();
+
+                // Split into lines and remove the first two:
+                // 0: "Error"
+                // 1: "at MyClass.constructor ..."
+                const stackLines = err.stack?.split("\n").slice(2) || [];
+            
+                // The first remaining line is where the constructor was called
+                const callerInfo = stackLines[0]?.trim() || "Unknown location";
+            
+                console.log(`MyClass constructor called from: ${callerInfo}`);
+                
+        
                 
                 pp4_watchFunction = g;
                 
@@ -44925,106 +44946,188 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 set(this, _R, e, "f"),
                 set(this, CR, document.createElement("div"), "f");
 
-                //dorachad
-                if (joiningServer) {
+                get(this, CR, "f").className = "track-info";
+                //DORACHAD
+                /*if (joiningServer) {
                     get(this, CR, "f").className = "track-info hidden";
                     loadInTrackWithGhosts([]);
                 } else {
                     get(this, CR, "f").className = "track-info";
-                };
+                };*/
                 //
 
                 e.appendChild(get(this, CR, "f"));
+                
                 const w = r.getRecord(i.profileSlot, c);
-                set(this, LR, new bR(get(this, CR, "f"),c,t,n,a,i,r,d,exitTrackLeaderboardToTrackSelector,(e => {
-                    set(this, BR, e, "f"),
-                    get(this, xR, "m", UR).call(this)
-                }
-                ),(e => {
-                    null == e || null != w && !e.time.lessOrEqual(w.time) ? null != w ? (C.textContent = TimerObject2.formatTimeString(w.time),
-                    C.classList.remove("no-record")) : (C.textContent = t.get("No record"),
-                    C.classList.add("no-record")) : (C.textContent = TimerObject2.formatTimeString(e.time) + " - " + e.position.toString() + bR.getPositionSuffix(e.position),
-                    C.classList.remove("no-record"))
-                }
-                )), "f"),
-                set(this, PR, document.createElement("div"), "f"),
-                get(this, PR, "f").className = "side-panel",
-                get(this, CR, "f").appendChild(get(this, PR, "f"));
-                const y = document.createElement("h2");
-                y.textContent = loadedTrackInfo.name,
-                get(this, PR, "f").appendChild(y);
-                const A = document.createElement("canvas");
-                //DORACHAD
-                if (trackPreviewCanvas) {
-                    A.width = trackPreviewCanvas.width,
-                    A.height = trackPreviewCanvas.height;
-                    const b = A.getContext("2d");
-                    null == b ? console.error("Failed to get 2D context for thumbnail canvas") : b.drawImage(trackPreviewCanvas, 0, 0);
-                };
-                //
-                const x = document.createElement("div");
-                x.className = "thumbnail",
-                x.appendChild(A),
-                get(this, PR, "f").appendChild(x);
-                const k = document.createElement("button");
-                let E;
-                switch (k.className = "button share",
-                k.innerHTML = '<img src="images/share.svg">',
-                k.addEventListener("click", ( () => {
-                    a.playUIClick(),
-                    get(this, CR, "f").className = "hidden";
-                    const e = l.toExportString(loadedTrackInfo);
-                    set(this, NR, new Hx(e,( () => {
-                        var e;
-                        null === (e = get(this, NR, "f")) || void 0 === e || e.dispose(),
-                        set(this, NR, null, "f"),
-                        get(this, CR, "f").className = "track-info"
+                
+                set(
+                  this,
+                  LR,
+                  new bR(
+                    get(this, CR, "f"),
+                    c,
+                    t,
+                    n,
+                    a,
+                    i,
+                    r,
+                    d,
+                    exitTrackLeaderboardToTrackSelector,
+                    (e) => {
+                      set(this, BR, e, "f");
+                      get(this, xR, "m", UR).call(this);
+                    },
+                    (e) => {
+                      if (
+                        e == null ||
+                        (w != null && !e.time.lessOrEqual(w.time))
+                      ) {
+                        if (w != null) {
+                          C.textContent = TimerObject2.formatTimeString(w.time);
+                          C.classList.remove("no-record");
+                        } else {
+                          C.textContent = t.get("No record");
+                          C.classList.add("no-record");
+                        }
+                      } else {
+                        C.textContent =
+                          TimerObject2.formatTimeString(e.time) +
+                          " - " +
+                          e.position.toString() +
+                          bR.getPositionSuffix(e.position);
+                        C.classList.remove("no-record");
+                      }
                     }
-                    ),null,!1,t,a,d,s), "f")
+                  ),
+                  "f"
+                );
+                
+                set(this, PR, document.createElement("div"), "f");
+                get(this, PR, "f").className = "side-panel";
+                get(this, CR, "f").appendChild(get(this, PR, "f"));
+                
+                const y = document.createElement("h2");
+                y.textContent = loadedTrackInfo.name;
+                get(this, PR, "f").appendChild(y);
+                
+                const A = document.createElement("canvas");
+                
+                // DORACHAD
+                if (trackPreviewCanvas) {
+                  A.width = trackPreviewCanvas.width;
+                  A.height = trackPreviewCanvas.height;
+                  const b = A.getContext("2d");
+                  if (b == null) {
+                    console.error("Failed to get 2D context for thumbnail canvas");
+                  } else {
+                    b.drawImage(trackPreviewCanvas, 0, 0);
+                  }
                 }
-                )),
-                x.appendChild(k),
-                l.environment) {
-                case Environment.Summer:
+                
+                const x = document.createElement("div");
+                x.className = "thumbnail";
+                x.appendChild(A);
+                get(this, PR, "f").appendChild(x);
+                
+                const k = document.createElement("button");
+                k.className = "button share";
+                k.innerHTML = '<img src="images/share.svg">';
+                
+                k.addEventListener("click", () => {
+                  a.playUIClick();
+                  get(this, CR, "f").className = "hidden";
+                
+                  const e = l.toExportString(loadedTrackInfo);
+                
+                  set(
+                    this,
+                    NR,
+                    new Hx(
+                      e,
+                      () => {
+                        let e = get(this, NR, "f");
+                        if (e) e.dispose();
+                
+                        set(this, NR, null, "f");
+                        get(this, CR, "f").className = "track-info";
+                      },
+                      null,
+                      false,
+                      t,
+                      a,
+                      d,
+                      s
+                    ),
+                    "f"
+                  );
+                });
+
+                //DORACHAD
+                if (!joiningServer) {
+                  x.appendChild(k);
+                }
+                
+                let E;
+                switch (l.environment) {
+                  case Environment.Summer:
                     E = "images/summer.svg";
                     break;
-                case Environment.Winter:
+                  case Environment.Winter:
                     E = "images/winter.svg";
                     break;
-                case Environment.Desert:
-                    E = "images/desert.svg"
+                  case Environment.Desert:
+                    E = "images/desert.svg";
+                    break;
                 }
+                
                 const S = document.createElement("img");
-                S.className = "environment",
-                S.src = E,
+                S.className = "environment";
+                S.src = E;
                 x.appendChild(S);
+                
                 const M = document.createElement("div");
-                M.className = "track-author",
-                M.textContent = t.get("Author") + ": " + (null !== (v = loadedTrackInfo.author) && void 0 !== v ? v : t.get("Unknown")),
+                M.className = "track-author";
+                M.textContent =
+                  t.get("Author") +
+                  ": " +
+                  (loadedTrackInfo.author ?? t.get("Unknown"));
                 get(this, PR, "f").appendChild(M);
+                
                 const T = document.createElement("div");
-                T.className = "divider",
+                T.className = "divider";
                 get(this, PR, "f").appendChild(T);
+                
                 const _ = document.createElement("div");
-                _.className = "personal-best-title",
-                _.textContent = t.get("Personal best"),
+                _.className = "personal-best-title";
+                _.textContent = t.get("Personal best");
                 get(this, PR, "f").appendChild(_);
+                
                 const C = document.createElement("div");
-                C.className = "personal-best",
-                null != w ? (C.textContent = TimerObject2.formatTimeString(w.time),
-                C.classList.remove("no-record")) : (C.textContent = t.get("No record"),
-                C.classList.add("no-record")),
+                C.className = "personal-best";
+                
+                if (w != null) {
+                  C.textContent = TimerObject2.formatTimeString(w.time);
+                  C.classList.remove("no-record");
+                } else {
+                  C.textContent = t.get("No record");
+                  C.classList.add("no-record");
+                }
+                
                 get(this, PR, "f").appendChild(C);
+                
                 const P = document.createElement("div");
-                P.className = "divider",
+                P.className = "divider";
                 get(this, PR, "f").appendChild(P);
+                
                 const I = document.createElement("div");
-                I.className = "opponents-title",
-                I.textContent = t.get("Opponents"),
-                get(this, PR, "f").appendChild(I),
-                set(this, IR, document.createElement("div"), "f"),
-                get(this, IR, "f").className = "opponents-container",
+                I.className = "opponents-title";
+                I.textContent = t.get("Opponents");
+                get(this, PR, "f").appendChild(I);
+                
+                set(this, IR, document.createElement("div"), "f");
+                get(this, IR, "f").className = "opponents-container";
                 get(this, PR, "f").appendChild(get(this, IR, "f"));
+
 
                 const isRanked = window.multiplayerClient.inRankedMatch;
                 
@@ -45086,10 +45189,14 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             }
                         );
                     }
-                }),
-                get(this, PR, "f").appendChild(get(this, menuWatchButton, "f"));
+                });
 
-                if (!isRanked) {
+                //DORACHAD
+                if (!joiningServer) {
+                    get(this, PR, "f").appendChild(get(this, menuWatchButton, "f"));
+                };
+
+                if (!isRanked && !joiningServer) {
                     set(this, menuStartMultiplayerButton, document.createElement("button"), "f"),
                     get(this, menuStartMultiplayerButton, "f").className = "button watch",
                     get(this, menuStartMultiplayerButton, "f").innerHTML = '<img src="images/grid_large.svg">',
@@ -45111,6 +45218,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 R.innerHTML = '<img src="images/play.svg">',
                 R.prepend(document.createTextNode(isRanked ? "Start Match" : t.get("Play"))),
                 R.addEventListener("click", ( () => {
+                    if (joiningServer) {
+                        loadInTrackWithGhosts([]);
+                        return;
+                    }
                     if (a.playUIClick(),
                     l.hasStartingPoint()) {
                         if (isRanked) {
@@ -45895,6 +46006,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     set(this, rankedMenu, null, "f");
 
                     const f = () => {
+                        //DORACHAD
+                            joiningServer = false;
+                        //
                         var e;
                         get(this, trackSelectionScreen, "f").show();    // cwcinc - important - go from track selection to main menu
                         null === (e = get(this, trackSelectionMenu, "f")) || void 0 === e || e.dispose(),
@@ -48956,10 +49070,13 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 WB.set(this, 1e4)
             }
             getLeaderboard(userId, trackId, skip, amount, onlyVerified) {
+                if (joiningServer) {
+                    trackId = window.currentTrackId;
+                }
                 return new Promise((resolve, reject) => {
                     window.multiplayerClient.proxy.getLeaderboard(versionNumber, userId, trackId, skip, amount, onlyVerified).then(leaderboardData => {
                         // console.log("lbdata", leaderboardData);
-                        if (leaderboardData === null) return;
+                        //if (leaderboardData === null) return;
                         const a = leaderboardData.total;
                         if ("number" != typeof a)
                             return void reject(new Error("Total is not a number"));
