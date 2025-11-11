@@ -1869,11 +1869,11 @@ class PP4_ServerCommunication {
             console.log(`Player ${data.player} completed tracks:`, completedTracks);
     
             pp4_completedTracks = completedTracks;
-            PP4_ui.serverTabs.forEach(e => {
+            /*PP4_ui.serverTabs.forEach(e => {
                 if (pp4_completedTracks.includes(PP4_ui.getServerNumber(e[0] * 8))) {
                     e[1].appendChild(PP4_ui.serverImages[e[0]]);   
                 }
-            })
+            })*/
     
         } catch (err) {
             console.error("Failed to fetch player data:", err);
