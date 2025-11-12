@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.4";
+const CLIENT_VERSION = "1.0.5";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -1649,6 +1649,8 @@ function sendCarMultiplayerData(data, isPaused) {
 
 
 // PP4 SHIT HERE
+window.placementMenuFlag = null;
+window.spectatorFlag = false;
 
 let pp4_userProfile = null;
 let pp4_completedTracks = [];
@@ -2079,6 +2081,7 @@ class PP4UI {
         this.serverPlayers = [];
         this.serverTabs = [];
         this.serverImages = [];
+        this.uiTrack = null;
         this.trackNames = {
             1: "Bonk III - The Last Act",
             2: "Primordial Soup",
@@ -2253,6 +2256,13 @@ class PP4UI {
             margin: 20px;
         }
         .top-right-hud {
+            position: relative;
+            top: 0;
+            right: 0;
+        }
+        .top-right-hud.hidden {
+            display: none;
+            opacity: 0;
             position: relative;
             top: 0;
             right: 0;
@@ -2528,10 +2538,6 @@ class PP4UI {
             window.multiplayerClient.inRankedMatch = false;
             const code = await PP4_server.getTrackCode(trackNumber);
             forceLoadTrackByCode(code);
-
-            this.CreateSideLeaderboard(await PP4_server.getTrackRuns(trackNumber));
-            
-            PP4_stats.startTiming();
         });
         
         if (styleType === "top") {
@@ -2998,6 +3004,9 @@ class PP4UI {
             if (currentSession !== lastSession) {
                 lastSession = currentSession;
                 if (this.serverTabs.length > 0) {
+                    if (window.placementMenuFlag !== null) {
+                        window.placementMenuFlag();
+                    }
                     this.updateServerEntries();
                 } else {
                     pp4_exitTrackCallback();
@@ -3024,44 +3033,56 @@ class PP4UI {
     }
     
     CreateHUD(ui) {
-        this.HUDtimer = document.createElement("div");
-        this.HUDtimer.className = "top-right-hud";
-
-        this.serverTimer = document.createElement("p");
-        this.HUDtimer.appendChild(this.serverTimer);
-
-        if (this.nextTrack) {
-            this.nextTrack.remove();
-        }
-
-        function mod25(num) {
-            if (typeof num !== 'number' || isNaN(num)) {
-                throw new Error("Input must be a valid number");
+        const trackNumber = this.getServerNumber(this.userServerNumber * 8)
+        if (this.uiTrack === trackNumber) {
+            this.HUDtimer.classList.remove("hidden");
+        } else {
+            this.uiTrack = trackNumber;
+            this.HUDtimer = document.createElement("div");
+            this.HUDtimer.className = "top-right-hud";
+    
+            this.serverTimer = document.createElement("p");
+            this.HUDtimer.appendChild(this.serverTimer);
+    
+            if (this.nextTrack) {
+                this.nextTrack.remove();
             }
-            return ((num - 1) % 25 + 25) % 25 + 1;
+    
+            function mod25(num) {
+                if (typeof num !== 'number' || isNaN(num)) {
+                    throw new Error("Input must be a valid number");
+                }
+                return ((num - 1) % 25 + 25) % 25 + 1;
+            }
+    
+    
+            
+            this.nextTrack = document.createElement("p");
+            this.nextTrack.className = "next-track visible";
+            this.nextTrack.style.fontSize = "20px";
+            this.nextTrack.textContent = `Next Track: ${this.trackNames[mod25(this.getServerNumber(this.userServerNumber * 8) + 1)]}`
+            
+            
+            this.HUDtimer.appendChild(this.nextTrack)
+        
+            ui.appendChild(this.HUDtimer);
+        
+            this.RunTimer(this.serverTimer, 15);
         }
-
-
         
-        this.nextTrack = document.createElement("p");
-        this.nextTrack.className = "next-track visible";
-        this.nextTrack.style.fontSize = "20px";
-        this.nextTrack.textContent = `Next Track: ${this.trackNames[mod25(this.getServerNumber(this.userServerNumber * 8) + 1)]}`
-        
-        
-        this.HUDtimer.appendChild(this.nextTrack)
-    
-        ui.appendChild(this.HUDtimer);
-    
-        this.RunTimer(this.serverTimer, 15);
     }
-    RemoveHUD(ui) {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
+    RemoveHUD(trackExit = 0) {
+        if (trackExit === 1) {
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+            this.nextTrack?.remove();
+            this.HUDtimer?.remove();            
+        } else {
+            this.HUDtimer.classList.add("hidden");
         }
-        this.nextTrack?.remove();
-        this.HUDtimer?.remove();
+
     }
     BoxDisplay(content, importFunc = null) {
 
@@ -35708,8 +35729,9 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                         e(i.x, i.y, i.z, t, i.rotation, i.rotationAxis, i.color, i.checkpointOrder, i.startOrder)
             }
             getId() {
-                return (0,
-                LA.sha256)(get(this, wb, "m", toByteArrayOG).call(this))
+                const sha = (0,LA.sha256)(get(this, wb, "m", toByteArrayOG).call(this))
+                console.log(sha);
+                return sha
             }
             getBounds() {
                 let e = 1 / 0
@@ -41422,15 +41444,29 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
 
                 this.spectatorAcceleration = (t.getSettingFloat($o.SpectatorAcceleration) + 0.05) * 10;
 
-                window.addEventListener("keydown", set(this, YT, (e => {
-                    t.checkKeyBinding(e, Ix.SpectatorMoveForwards) ? (set(this, spectatorMovingForwards, !0, "f"),
-                    e.preventDefault()) : t.checkKeyBinding(e, Ix.SpectatorMoveRight) ? (set(this, spectatorMovingRight, !0, "f"),
-                    e.preventDefault()) : t.checkKeyBinding(e, Ix.SpectatorMoveBackwards) ? (set(this, spectatorMovingLeft, !0, "f"),
-                    e.preventDefault()) : t.checkKeyBinding(e, Ix.SpectatorMoveLeft) ? (set(this, spectatorMovingBackwards, !0, "f"),
-                    e.preventDefault()) : t.checkKeyBinding(e, Ix.SpectatorSpeedModifier) && (set(this, isSpectatorBoosting, !0, "f"),
-                    e.preventDefault())
-                }
-                ), "f")),
+                window.addEventListener(
+                    "keydown",
+                    set(this, YT, (e) => {
+                        if (t.checkKeyBinding(e, Ix.SpectatorMoveForwards)) {
+                            set(this, spectatorMovingForwards, true, "f");
+                            e.preventDefault();
+                        } else if (t.checkKeyBinding(e, Ix.SpectatorMoveRight)) {
+                            set(this, spectatorMovingRight, true, "f");
+                            e.preventDefault();
+                        } else if (t.checkKeyBinding(e, Ix.SpectatorMoveBackwards)) {
+                            set(this, spectatorMovingLeft, true, "f");
+                            e.preventDefault();
+                        } else if (t.checkKeyBinding(e, Ix.SpectatorMoveLeft)) {
+                            set(this, spectatorMovingBackwards, true, "f");
+                            e.preventDefault();
+                        } else if (t.checkKeyBinding(e, Ix.SpectatorSpeedModifier)) {
+                            set(this, isSpectatorBoosting, true, "f");
+                            e.preventDefault();
+                        }
+                    }),
+                    "f"
+                );
+
                 window.addEventListener("keyup", set(this, KT, (e => {
                     t.checkKeyBinding(e, Ix.SpectatorMoveForwards) ? set(this, spectatorMovingForwards, !1, "f") : t.checkKeyBinding(e, Ix.SpectatorMoveRight) ? set(this, spectatorMovingRight, !1, "f") : t.checkKeyBinding(e, Ix.SpectatorMoveBackwards) ? set(this, spectatorMovingLeft, !1, "f") : t.checkKeyBinding(e, Ix.SpectatorMoveLeft) ? set(this, spectatorMovingBackwards, !1, "f") : t.checkKeyBinding(e, Ix.SpectatorSpeedModifier) && set(this, isSpectatorBoosting, !1, "f")
                 }
@@ -42864,17 +42900,15 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 },
 
                 // IMPORTANT - enter new track and setup car for the 1st time only (not on respawn)
-
-                get(this, carFunctions, "m", setupPrimaryCar).call(this),
-                get(this, carFunctions, "m", setupDrivingGhostCars).call(this),
-                get(this, carFunctions, "m", initMultiplayerCars).call(this);   // cwcinc
+                get(this, carFunctions, "m", setupPrimaryCar).call(this);
+                get(this, carFunctions, "m", setupDrivingGhostCars).call(this);
+                get(this, carFunctions, "m", initMultiplayerCars).call(this); // cwcinc
                 
                 const thisTrackId = get(this, environmentManager, "f").getID();
-
+                
                 if (multiplayerEnabled) {
                     window.multiplayerClient.username = get(this, TC, "f").getCurrentUserProfile().nickname;
-                    // get(this, TC, "f").getCurrentUserProfile().carColors
-
+                
                     if (!window.multiplayerClient.spectating) {
                         if (window.multiplayerClient.inRankedMatch) {
                             window.multiplayerClient.joinRoomById(window.multiplayerClient.rankedMatchRoomId);
@@ -42882,146 +42916,226 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                             window.multiplayerClient.joinRoomById(thisTrackId);
                         }
                     }
-
+                
                     window.multiplayerClient.initLb();
-                };
-
-                window.addEventListener("keydown", set(this, rP, (e => {
-                    var t, n, i;
-                    if (!get(this, cP, "f")) {
-                        if (get(this, carCameraObject, "f").isEnabled)
-                            "Escape" == e.code && (get(this, carCameraObject, "f").isEnabled = !1);
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleCheckpointReset))
-                            e.repeat || null == get(this, pauseScreen, "f") && (null === (t = get(this, primaryCar, "f")) || void 0 === t ? void 0 : t.hasStarted()) && (get(this, primaryCar, "f").hasFinished() || !get(this, primaryCar, "f").hasCheckpointToRespawnAt() || !get(this, ZC, "f") || null != get(this, $C, "f") && (new Date).getTime() - get(this, $C, "f").getTime() < 250 ? (get(this, carFunctions, "m", resetMainCar).call(this),
-                            get(this, controlCar, "f").reset = !1) : get(this, controlCar, "f").reset = !0),
-                            e.preventDefault();
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleHonkHorn)) {
-                            if (window.multiplayerClient.spectating) {return;}
-                            let hornId = get(this, primaryCar, "f").getHornId();
-                            get(this, primaryCar, "f").playHornSound(hornId),
-                            window.multiplayerClient.honkHorn(hornId),
-                            e.preventDefault();
-                        }
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleSpecial)) {
-                            let carPos = get(this, primaryCar, "f").getPosition();
-                            let amplification = get(this, primaryCar, "f").getSpeedKmh();
-                            let bombLocation = {x:carPos.x, y:carPos.y, z:carPos.z};
-                            window.multiplayerClient.dropBomb(bombLocation, amplification),
-                            e.preventDefault();
-                        }
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleStartReset))
-                            e.repeat || null == get(this, pauseScreen, "f") && (null === (n = get(this, primaryCar, "f")) || void 0 === n ? void 0 : n.hasStarted()) && get(this, carFunctions, "m", resetMainCar).call(this),
-                            e.preventDefault();
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleCockpitCamera)) {
-                            if (!e.repeat) {
-                                if (null == get(this, pauseScreen, "f") && !(null == get(this, primaryCar, "f") || get(this, primaryCar, "f").hasFinished())) {
-                                    var carToFollow;
-                                    if (window.multiplayerClient.spectating) {
-                                        const multiplayerCars = get(this, multiplayerCarMap, "f").values();
-                                        carToFollow = multiplayerCars.next().value;
-                                    } else {
-                                        carToFollow = get(this, primaryCar, "f");
-                                    }
-                                    
-                                    if (get(this, settingsManager, "f").getSettingBoolean($o.CockpitCameraToggle)) {
-                                        if (get(this, sceneObject, "f").camera == carToFollow.cameraOrbit) {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraCockpit)
-                                        } else {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbit)
-                                        }
-                                    } else {
-                                        if (get(this, settingsManager, "f").getSettingBoolean($o.DefaultCameraMode)) {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbit)
-                                        } else {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraCockpit)
-                                        }
-                                    }
-                                }
-                            }
-                            e.preventDefault();
-                        }
-                        else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleBackwardsCamera)) {   // camera while driving
-                            if (!e.repeat) {
-                                if (null == get(this, pauseScreen, "f") && !(null == get(this, primaryCar, "f") || get(this, primaryCar, "f").hasFinished())) {
-                                    var carToFollow;
-                                    if (window.multiplayerClient.spectating) {
-                                        const multiplayerCars = get(this, multiplayerCarMap, "f").values();
-                                        carToFollow = multiplayerCars.next().value;
-                                    } else {
-                                        carToFollow = get(this, primaryCar, "f");
-                                    }
-                                    
-                                    if (get(this, settingsManager, "f").getSettingBoolean($o.BackwardsCameraToggle)) {
-                                        if (get(this, sceneObject, "f").camera != carToFollow.cameraOrbitBackwards) {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbitBackwards)
-                                        } else {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbit)
-                                        }
-                                    } else {
-                                        if (get(this, settingsManager, "f").getSettingBoolean($o.DefaultCameraMode)) {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbit)
-                                        } else {
-                                            get(this, sceneObject, "f").setCamera(carToFollow.cameraOrbitBackwards)
-                                        }
-                                    }
-                                }
-                            }
-                            e.preventDefault();
-                        }
-                        //DORACHAD
-                        else if (c.checkKeyBinding(e, Ix.HidePlayers)) {
-                            hideOtherPlayersFlag = !hideOtherPlayersFlag;
-                            e.preventDefault();
-                        }
-                        else if (c.checkKeyBinding(e, Ix.ClipRun)) {
-                            PP4_clipping.createClip();
-                            e.preventDefault();
-                        }
-                        //
-                        else if (c.checkKeyBinding(e, Ix.ToggleUI))
-                            set(this, zC, !get(this, zC, "f"), "f"),
-                            get(this, carFunctions, "m", dP).call(this, get(this, zC, "f")),
-                            e.preventDefault();
-                        else if (c.checkKeyBinding(e, Ix.Pause)) {
-                            if (null == get(this, pauseScreen, "f")) {
-                                if (!(null === (i = get(this, primaryCar, "f")) || void 0 === i ? void 0 : i.hasFinished())) {
-                                    const e = new Date;
-                                    (null == get(this, KC, "f") || Math.abs(e.getTime() - get(this, KC, "f").getTime()) > 1e3) && (set(this, pauseScreen, new lC(a), "f"),
-                                    set(this, KC, e, "f"))
-                                }
-                            } else
-                                get(this, pauseScreen, "f").startFadeOut(( () => {
-                                    var e;
-                                    null === (e = get(this, pauseScreen, "f")) || void 0 === e || e.dispose(),
-                                    set(this, pauseScreen, null, "f")
-                                }
-                                ));
-                            e.preventDefault()
-                        } else
-                            "Escape" == e.code && (
-                                null != get(this, pauseScreen, "f") ? get(this, pauseScreen, "f").startFadeOut(( () => {
-                                var e;
-                                null === (e = get(this, pauseScreen, "f")) || void 0 === e || e.dispose(),
-                                set(this, pauseScreen, null, "f")
-                            }
-                            )) : exitTrackCallback(),
-                            e.preventDefault()
-                        );
-                        if (c.checkKeyBinding(e, Ix.ToggleSpectatorCamera)) {
-                            if (null == get(this, pauseScreen, "f")) { //&& !get(this, primaryCar, "f").hasFinished()) {
-                                get(this, carCameraObject, "f").camera.position.copy(get(this, sceneObject, "f").camera.position);
-                                const e = new Euler(0,0,0,"YXZ").setFromQuaternion(get(this, sceneObject, "f").camera.quaternion);
-                                e.x = Math.round(1e4 * e.x) / 1e4,
-                                e.y = Math.round(1e4 * e.y) / 1e4,
-                                e.z = 0,
-                                get(this, carCameraObject, "f").camera.quaternion.setFromEuler(e),
-                                get(this, carCameraObject, "f").toggle()
-                            }
-                            e.preventDefault()
-                        }
-                    }
                 }
-                ), "f")),
+                
+                // MAIN KEYDOWN HANDLER
+                window.addEventListener(
+                    "keydown",
+                    set(this, rP, (e) => {
+                        var t, n, i;
+                
+                        if (!get(this, cP, "f")) {
+                            // ESCAPE WHILE CAMERA ENABLED
+                            if (get(this, carCameraObject, "f").isEnabled) {
+                                if (e.code === "Escape") {
+                                    get(this, carCameraObject, "f").isEnabled = false;
+                                }
+                            }
+                            // RESET TO CHECKPOINT
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleCheckpointReset)) {
+                                if (
+                                    !e.repeat &&
+                                    get(this, pauseScreen, "f") == null &&
+                                    (t = get(this, primaryCar, "f"))?.hasStarted()
+                                ) {
+                                    if (
+                                        get(this, primaryCar, "f").hasFinished() ||
+                                        !get(this, primaryCar, "f").hasCheckpointToRespawnAt() ||
+                                        !get(this, ZC, "f") ||
+                                        (get(this, $C, "f") != null &&
+                                            new Date().getTime() - get(this, $C, "f").getTime() < 250)
+                                    ) {
+                                        get(this, carFunctions, "m", resetMainCar).call(this);
+                                        get(this, controlCar, "f").reset = false;
+                                    } else {
+                                        get(this, controlCar, "f").reset = true;
+                                    }
+                                }
+                                e.preventDefault();
+                            }
+                            // HONK HORN
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleHonkHorn)) {
+                                if (!window.multiplayerClient.spectating) {
+                                    const hornId = get(this, primaryCar, "f").getHornId();
+                                    get(this, primaryCar, "f").playHornSound(hornId);
+                                    window.multiplayerClient.honkHorn(hornId);
+                                }
+                                e.preventDefault();
+                            }
+                            // DROP BOMB
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleSpecial)) {
+                                const carPos = get(this, primaryCar, "f").getPosition();
+                                const amplification = get(this, primaryCar, "f").getSpeedKmh();
+                                const bombLocation = { x: carPos.x, y: carPos.y, z: carPos.z };
+                                window.multiplayerClient.dropBomb(bombLocation, amplification);
+                                e.preventDefault();
+                            }
+                            // FULL RESET
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleStartReset)) {
+                                if (
+                                    !e.repeat &&
+                                    get(this, pauseScreen, "f") == null &&
+                                    (n = get(this, primaryCar, "f"))?.hasStarted()
+                                ) {
+                                    get(this, carFunctions, "m", resetMainCar).call(this);
+                                }
+                                e.preventDefault();
+                            }
+                            // COCKPIT CAMERA
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleCockpitCamera)) {
+                                if (!e.repeat) {
+                                    if (
+                                        get(this, pauseScreen, "f") == null &&
+                                        !(get(this, primaryCar, "f")?.hasFinished())
+                                    ) {
+                                        let carToFollow;
+                                        if (window.multiplayerClient.spectating) {
+                                            const multiplayerCars = get(this, multiplayerCarMap, "f").values();
+                                            carToFollow = multiplayerCars.next().value;
+                                        } else {
+                                            carToFollow = get(this, primaryCar, "f");
+                                        }
+                
+                                        const scene = get(this, sceneObject, "f");
+                                        const settings = get(this, settingsManager, "f");
+                
+                                        if (settings.getSettingBoolean($o.CockpitCameraToggle)) {
+                                            if (scene.camera === carToFollow.cameraOrbit) {
+                                                scene.setCamera(carToFollow.cameraCockpit);
+                                            } else {
+                                                scene.setCamera(carToFollow.cameraOrbit);
+                                            }
+                                        } else {
+                                            if (settings.getSettingBoolean($o.DefaultCameraMode)) {
+                                                scene.setCamera(carToFollow.cameraOrbit);
+                                            } else {
+                                                scene.setCamera(carToFollow.cameraCockpit);
+                                            }
+                                        }
+                                    }
+                                }
+                                e.preventDefault();
+                            }
+                            // BACKWARDS CAMERA
+                            else if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleBackwardsCamera)) {
+                                if (!e.repeat) {
+                                    if (
+                                        get(this, pauseScreen, "f") == null &&
+                                        !(get(this, primaryCar, "f")?.hasFinished())
+                                    ) {
+                                        let carToFollow;
+                                        if (window.multiplayerClient.spectating) {
+                                            const multiplayerCars = get(this, multiplayerCarMap, "f").values();
+                                            carToFollow = multiplayerCars.next().value;
+                                        } else {
+                                            carToFollow = get(this, primaryCar, "f");
+                                        }
+                
+                                        const scene = get(this, sceneObject, "f");
+                                        const settings = get(this, settingsManager, "f");
+                
+                                        if (settings.getSettingBoolean($o.BackwardsCameraToggle)) {
+                                            if (scene.camera !== carToFollow.cameraOrbitBackwards) {
+                                                scene.setCamera(carToFollow.cameraOrbitBackwards);
+                                            } else {
+                                                scene.setCamera(carToFollow.cameraOrbit);
+                                            }
+                                        } else {
+                                            if (settings.getSettingBoolean($o.DefaultCameraMode)) {
+                                                scene.setCamera(carToFollow.cameraOrbit);
+                                            } else {
+                                                scene.setCamera(carToFollow.cameraOrbitBackwards);
+                                            }
+                                        }
+                                    }
+                                }
+                                e.preventDefault();
+                            }
+                            // CUSTOM SHORTCUTS
+                            else if (c.checkKeyBinding(e, Ix.HidePlayers)) {
+                                hideOtherPlayersFlag = !hideOtherPlayersFlag;
+                                e.preventDefault();
+                            } else if (c.checkKeyBinding(e, Ix.ClipRun)) {
+                                PP4_clipping.createClip();
+                                e.preventDefault();
+                            }
+                            // TOGGLE UI
+                            else if (c.checkKeyBinding(e, Ix.ToggleUI)) {
+                                set(this, zC, !get(this, zC, "f"), "f");
+                                get(this, carFunctions, "m", dP).call(this, get(this, zC, "f"));
+                                e.preventDefault();
+                            }
+                            // PAUSE
+                            else if (c.checkKeyBinding(e, Ix.Pause)) {
+                                if (get(this, pauseScreen, "f") == null) {
+                                    if (!(i = get(this, primaryCar, "f"))?.hasFinished()) {
+                                        const now = new Date();
+                                        if (
+                                            get(this, KC, "f") == null ||
+                                            Math.abs(now.getTime() - get(this, KC, "f").getTime()) > 1000
+                                        ) {
+                                            set(this, pauseScreen, new lC(a), "f");
+                                            set(this, KC, now, "f");
+                                        }
+                                    }
+                                } else {
+                                    get(this, pauseScreen, "f").startFadeOut(() => {
+                                        const ps = get(this, pauseScreen, "f");
+                                        ps?.dispose();
+                                        set(this, pauseScreen, null, "f");
+                                    });
+                                }
+                                e.preventDefault();
+                            }
+                            // ESCAPE EXIT
+                            else if (e.code === "Escape") {
+                                if (get(this, pauseScreen, "f") != null) {
+                                    get(this, pauseScreen, "f").startFadeOut(() => {
+                                        const ps = get(this, pauseScreen, "f");
+                                        ps?.dispose();
+                                        set(this, pauseScreen, null, "f");
+                                    });
+                                } else {
+                                    exitTrackCallback();
+                                }
+                                e.preventDefault();
+                            }
+                
+                            // TOGGLE SPECTATOR CAMERA
+                            if (c.checkKeyBinding(e, Ix.ToggleSpectatorCamera)) {
+                                const spectatorFunction = () => {
+                                    if (get(this, pauseScreen, "f") == null) {
+                                        const carCam = get(this, carCameraObject, "f").camera;
+                                        const sceneCam = get(this, sceneObject, "f").camera;
+                
+                                        carCam.position.copy(sceneCam.position);
+                
+                                        const euler = new Euler(0, 0, 0, "YXZ").setFromQuaternion(sceneCam.quaternion);
+                                        euler.x = Math.round(euler.x * 1e4) / 1e4;
+                                        euler.y = Math.round(euler.y * 1e4) / 1e4;
+                                        euler.z = 0;
+                
+                                        carCam.quaternion.setFromEuler(euler);
+                                        get(this, carCameraObject, "f").toggle();
+
+                                        if (get(this, carCameraObject, "f").isEnabled) {
+                                            window.spectatorFlag = true;
+                                        } else {
+                                            window.spectatorFlag = false;
+                                        }
+                                    }
+                                };
+                                spectatorFunction();
+                
+                                e.preventDefault();
+                            }
+                        }
+                    }),
+                    "f"
+                );
+
                 window.addEventListener("keyup", set(this, cockpitCameraKeyUpListener, (e => {
                     if (!get(this, carCameraObject, "f").isEnabled) {
                         if (get(this, settingsManager, "f").checkKeyBinding(e, Ix.VehicleCockpitCamera)) {
@@ -43134,7 +43248,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 // IMPORTANT - called when track is exited
 
                 //DORACHAD
-                PP4_ui.RemoveHUD();
+                PP4_ui.RemoveHUD(1);
                 
                 if (window.multiplayerClient.currentRoom !== null) {
                     window.multiplayerClient.leaveRoom();
@@ -44516,6 +44630,8 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         };
         class AR {
             constructor(e, t, n, i, r, a, s, o, l, c, h) {
+
+                window.placementMenuFlag = l;
                 
                 GI.add(this),
                 QI.set(this, void 0),
@@ -44903,21 +45019,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         ;
         const TrackSelectedMenu = class {
             constructor(e, t, n, i, r, a, s, loadedTrackInfo, l, c, trackPreviewCanvas, d, exitTrackLeaderboardToTrackSelector, p, loadInTrackWithGhosts, m, g) {
-
-                                
-                const err = new Error();
-
-                // Split into lines and remove the first two:
-                // 0: "Error"
-                // 1: "at MyClass.constructor ..."
-                const stackLines = err.stack?.split("\n").slice(2) || [];
-            
-                // The first remaining line is where the constructor was called
-                const callerInfo = stackLines[0]?.trim() || "Unknown location";
-            
-                console.log(`MyClass constructor called from: ${callerInfo}`);
-                
-        
                 
                 pp4_watchFunction = g;
                 
@@ -45219,6 +45320,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 R.prepend(document.createTextNode(isRanked ? "Start Match" : t.get("Play"))),
                 R.addEventListener("click", ( () => {
                     if (joiningServer) {
+                        PP4_stats.startTiming();
                         loadInTrackWithGhosts([]);
                         return;
                     }
@@ -46008,6 +46110,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                     const f = () => {
                         //DORACHAD
                             joiningServer = false;
+                            window.placementMenuFlag = null;
                         //
                         var e;
                         get(this, trackSelectionScreen, "f").show();    // cwcinc - important - go from track selection to main menu
@@ -49204,6 +49307,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 });
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
+                
+                if (joiningServer) {
+                    trackId = window.currentTrackId;
+                }
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
                 const serializeColor = function(color) {
                     return { r: color.r, g: color.g, b: color.b };
