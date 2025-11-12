@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.5";
+const CLIENT_VERSION = "1.0.6";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
