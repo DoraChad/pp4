@@ -42346,7 +42346,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             )),
             window.multiplayerClient.matchFinishedDialogue = (resultsText) => {
-                console.log(trackFrames[1])
                 get(this, dialogueBoxMap, "f").showConfirm(
                     resultsText,
                     "Cancel",
@@ -42363,6 +42362,36 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                   , carRecording = e.getRecording()
                   , carColors = e.getColors()
                   , o = get(this, iP, "f");
+
+                
+                const serializeColor = function(color) {
+                    return { r: color.r, g: color.g, b: color.b };
+                }
+
+                //DORACHAD
+                if (joiningServer && trackFrames[1] > carTime.numberOfFrames) {
+                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+                    const submitColors = {
+                        primary: serializeColor(carColors.primary),
+                        secondary: serializeColor(carColors.secondary),
+                        frame: serializeColor(carColors.frame),
+                        rims: serializeColor(carColors.rims)
+                    };
+
+                    const userProfile = pp_User.getCurrentUserProfile()
+                    
+                    const playerData = {
+                        replayId: null,
+                        userId: userProfile.tokenHash,
+                        name: userProfile.nickname,
+                        track: `track${trackNumber}`,
+                        frames: carTime.numberOfFrames
+                    };
+                    
+                    PP4_server.submitRun(playerData);
+    
+                }
+                //
 
                 const runDeterminism = get(this, primaryCar, "f").getDeterminism();
 
@@ -44850,20 +44879,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
         const TrackSelectedMenu = class {
             constructor(e, t, n, i, r, a, s, loadedTrackInfo, l, c, trackPreviewCanvas, d, exitTrackLeaderboardToTrackSelector, p, loadInTrackWithGhosts, m, g) {
 
-                                
-                const err = new Error();
-
-                // Split into lines and remove the first two:
-                // 0: "Error"
-                // 1: "at MyClass.constructor ..."
-                const stackLines = err.stack?.split("\n").slice(2) || [];
-            
-                // The first remaining line is where the constructor was called
-                const callerInfo = stackLines[0]?.trim() || "Unknown location";
-            
-                console.log(`MyClass constructor called from: ${callerInfo}`);
-                
-        
                 
                 pp4_watchFunction = g;
                 
@@ -49151,9 +49166,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             submitLeaderboard(userToken, username, carColors, trackId, recordingTime, rawRecording) {
                 // "version=" + versionNumber + "&userToken=" + encodeURIComponent(userToken) + "&name=" + encodeURIComponent(username) + "&carColors=" + carColors.serialize() + "&trackId=" + trackId + "&frames=" + recordingTime.numberOfFrames.toString() + "&recording=" + recording
-                const serializeColor = function(color) {
-                    return { r: color.r, g: color.g, b: color.b };
-                }
 
                 
                 return new Promise((resolve, reject) => {
@@ -49175,28 +49187,6 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                                 }) : reject(new Error("UploadId is not a safe integer"))
 
 
-                                //DORACHAD
-                                if (joiningServer) {
-                                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
-                                    const submitColors = {
-                                        primary: serializeColor(carColors.primary),
-                                        secondary: serializeColor(carColors.secondary),
-                                        frame: serializeColor(carColors.frame),
-                                        rims: serializeColor(carColors.rims)
-                                    };
-                                    
-                                    const playerData = {
-                                        replayId: t,
-                                        userId: pp_User.getCurrentUserProfile().tokenHash,
-                                        name: username,
-                                        track: `track${trackNumber}`,
-                                        frames: recordingTime.numberOfFrames
-                                    };
-                                    
-                                    PP4_server.submitRun(playerData);
-                
-                                }
-                                //
                             }
                         } catch (e) {
                             reject(new Error("Unknown error: " + String(e)))
