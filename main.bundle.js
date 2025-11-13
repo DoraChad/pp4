@@ -1674,6 +1674,8 @@ let pp4_exitTrackCallback = () => {};
 
 let targetDateTime;
 
+let trackFrames = {};
+
 
 function downloadVar(value) {
     const blob = new Blob([value], { type: "text/plain" });
@@ -1836,49 +1838,22 @@ class PP4_ServerCommunication {
     }
     
     async fetchPlayerData(userId) {
-        if (!userId) {
-            console.warn("No userId");
-            pp4_completedTracks = [];
-        }
-    
         try {
-            const response = await fetch(`${this.url}player?userId=${encodeURIComponent(userId)}`);
-    
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.warn(`No entries found for player ${userId}`);
-                    return [];
-                }
-                throw new Error(`Server error: ${response.status}`);
-            }
-    
-            const data = await response.json();
-    
-            if (!data || !data.data || typeof data.data !== "object") {
-                console.warn("Unexpected player data structure:", data);
-                return [];
-            }
-    
-            const completedTracks = Object.keys(data.data)
-                .filter(trackKey => Array.isArray(data.data[trackKey]) && data.data[trackKey].length > 0)
-                .map(trackKey => {
-                    const match = trackKey.match(/\d+/);
-                    return match ? parseInt(match[0], 10) : null;
-                })
-                .filter(num => num !== null);
-    
-            console.log(`Player ${data.player} completed tracks:`, completedTracks);
-    
-            pp4_completedTracks = completedTracks;
-            /*PP4_ui.serverTabs.forEach(e => {
-                if (pp4_completedTracks.includes(PP4_ui.getServerNumber(e[0] * 8))) {
-                    e[1].appendChild(PP4_ui.serverImages[e[0]]);   
-                }
-            })*/
-    
+            const res = await fetch(`${this.url}player?userId=${userId}`);
+            if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+            const data = await res.json();
+            
+            trackFrames = {};
+            for (const [trackKey, details] of Object.entries(data.details)) {
+                const trackNum = parseInt(trackKey.replace("track", ""), 10);
+                trackFrames[trackNum] = details.frames;
+        }
+        
+            console.log("Track data loaded:", trackFrames);
+            return trackFrames;
         } catch (err) {
-            console.error("Failed to fetch player data:", err);
-            pp4_completedTracks = [];
+            console.error("Error fetching or parsing track data:", err);
+            return {};
         }
     }
 
@@ -1904,7 +1879,6 @@ class PP4_ServerCommunication {
         
             const data = await response.json();
             targetDateTime = new Date(data.end).getTime();
-        
             return { status: "online", data };
         
         } catch (err) {
@@ -2078,7 +2052,6 @@ class PP4UI {
         
         this.serverPlayers = [];
         this.serverTabs = [];
-        this.serverImages = [];
         this.trackNames = {
             1: "Bonk III - The Last Act",
             2: "Primordial Soup",
@@ -2556,9 +2529,9 @@ class PP4UI {
         blur.className = "cover";
 
 
-        //if (pp4_completedTracks.includes(trackNumber)) {
-        //    div.appendChild(img);   
-        //}
+        if (trackFrames[trackNumber]) {
+            div.appendChild(img);   
+        }
         div.appendChild(text);
         div.appendChild(entry);
         
@@ -2567,35 +2540,7 @@ class PP4UI {
         PP4_main_container.appendChild(div);
         this.serverEntries += 1;
 
-        this.serverImages.push([img])
         this.serverTabs.push([serverNumber, div]);
-    }
-
-    CreateSideLeaderboard(data) {
-
-        let allData;
-        function findRunByUser(runs, userId) {
-            return runs.find(r => r.userId === userId) || null;
-        }
-        
-        const userRun = findRunByUser(data, pp_User.getCurrentUserProfile().tokenHash);
-
-        if (userRun) {
-            const topRuns = data.slice(0, 3);
-
-            userRun.position - 1
-
-            if (userRun > 5) {                    
-                allData = [...topRuns, ...userRun]
-            } else {
-                allData = data.slice(0, 5);
-            }
-
-        } else {
-            allData = data.slice(0, 5);
-        }
-        
-        console.log(allData);
     }
     
     createCountdown(parent) {
@@ -41961,10 +41906,10 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                 if (get(this, U_, "f") !== e) {
                     if (e) {
                         get(this, N_, "f").classList.add("visible");
-                        PP4_ui.nextTrack.classList.add("visible");
+                        PP4_ui.nextTrack?.classList.add("visible");
                     } else {
                         get(this, N_, "f").classList.remove("visible");
-                        PP4_ui.nextTrack.classList.remove("visible");
+                        PP4_ui.nextTrack?.classList.remove("visible");
                     }
             
                     get(this, N_, "f").inert = !e;
@@ -42401,6 +42346,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
             }
             )),
             window.multiplayerClient.matchFinishedDialogue = (resultsText) => {
+                console.log(trackFrames[1])
                 get(this, dialogueBoxMap, "f").showConfirm(
                     resultsText,
                     "Cancel",
