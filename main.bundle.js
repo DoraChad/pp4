@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.6";
+const CLIENT_VERSION = "1.0.7";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -1842,13 +1842,20 @@ class PP4_ServerCommunication {
             const res = await fetch(`${this.url}player?userId=${userId}`);
             if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
             const data = await res.json();
-            
+    
+            console.log("Fetched data:", data);
+    
             trackFrames = {};
-            for (const [trackKey, details] of Object.entries(data.details)) {
-                const trackNum = parseInt(trackKey.replace("track", ""), 10);
-                trackFrames[trackNum] = details.frames;
-        }
-        
+    
+            if (data && data.details && typeof data.details === 'object') {
+                for (const [trackKey, details] of Object.entries(data.details)) {
+                    const trackNum = parseInt(trackKey.replace("track", ""), 10);
+                    trackFrames[trackNum] = details.frames;
+                }
+            } else {
+                console.warn("No valid 'details' object in API response.");
+            }
+    
             console.log("Track data loaded:", trackFrames);
             return trackFrames;
         } catch (err) {
@@ -1856,6 +1863,7 @@ class PP4_ServerCommunication {
             return {};
         }
     }
+
 
 
 
@@ -42363,35 +42371,38 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
                   , carColors = e.getColors()
                   , o = get(this, iP, "f");
 
-                
-                const serializeColor = function(color) {
-                    return { r: color.r, g: color.g, b: color.b };
-                }
 
-                //DORACHAD
-                if (joiningServer && trackFrames[1] > carTime.numberOfFrames) {
+                if (joiningServer) {
+                    const serializeColor = function(color) {
+                        return { r: color.r, g: color.g, b: color.b };
+                    }
+                    
                     const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
-                    const submitColors = {
-                        primary: serializeColor(carColors.primary),
-                        secondary: serializeColor(carColors.secondary),
-                        frame: serializeColor(carColors.frame),
-                        rims: serializeColor(carColors.rims)
-                    };
-
-                    const userProfile = pp_User.getCurrentUserProfile()
-                    
-                    const playerData = {
-                        replayId: null,
-                        userId: userProfile.tokenHash,
-                        name: userProfile.nickname,
-                        track: `track${trackNumber}`,
-                        frames: carTime.numberOfFrames
-                    };
-                    
-                    PP4_server.submitRun(playerData);
     
+                    //DORACHAD
+                    if (trackFrames[trackNumber] === null || trackFrames[trackNumber] > carTime.numberOfFrames) {
+                        
+                        const submitColors = {
+                            primary: serializeColor(carColors.primary),
+                            secondary: serializeColor(carColors.secondary),
+                            frame: serializeColor(carColors.frame),
+                            rims: serializeColor(carColors.rims)
+                        };
+    
+                        const userProfile = pp_User.getCurrentUserProfile()
+                        
+                        const playerData = {
+                            replayId: null,
+                            userId: userProfile.tokenHash,
+                            name: userProfile.nickname,
+                            track: `track${trackNumber}`,
+                            frames: carTime.numberOfFrames
+                        };
+                        
+                        PP4_server.submitRun(playerData);
+        
+                    }
                 }
-                //
 
                 const runDeterminism = get(this, primaryCar, "f").getDeterminism();
 
