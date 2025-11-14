@@ -2501,9 +2501,6 @@ class PP4UI {
             window.multiplayerClient.inRankedMatch = false;
             const code = await PP4_server.getTrackCode(trackNumber);
             forceLoadTrackByCode(code);
-
-            this.CreateSideLeaderboard(await PP4_server.getTrackRuns(trackNumber));
-            
             PP4_stats.startTiming();
         });
         
