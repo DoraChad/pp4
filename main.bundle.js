@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.8";
+const CLIENT_VERSION = "1.0.9";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -2856,33 +2856,17 @@ class PP4UI {
     
     getServerNumber(offset = 0, sessionLengthMinutes = 15) {
         const now = new Date();
-
-        const PST_HOUR_12 = 12;
-        const PST_OFFSET_HOURS = -8;
     
-
-        const baseHourUTC = PST_HOUR_12 - PST_OFFSET_HOURS; 
-        const year = now.getUTCFullYear();
-        const month = now.getUTCMonth();
-        const day = now.getUTCDate();
+        const baselineUTC = Date.UTC(2025, 10, 9, 12 + 8, 0, 0, 0);
     
-
-        let baseTimeUTC = new Date(Date.UTC(year, month, day, baseHourUTC, 0, 0, 0));
-    
-       
-        if (now < baseTimeUTC) {
-            baseTimeUTC.setUTCDate(baseTimeUTC.getUTCDate() - 1);
-        }
-    
-
-        const diffMinutes = (now - baseTimeUTC) / 60000;
+        const diffMinutes = (now.getTime() - baselineUTC) / 60000;
         const sessionNumber = Math.floor(diffMinutes / sessionLengthMinutes);
     
-
         const number = ((sessionNumber + offset) % 25 + 25) % 25 + 1;
     
         return number;
     }
+
 
 
 
