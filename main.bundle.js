@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.0.9";
+const CLIENT_VERSION = "1.1.0";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -1650,6 +1650,8 @@ function sendCarMultiplayerData(data, isPaused) {
 
 // PP4 SHIT HERE
 
+let serverGap = 5;
+
 let pp4_userProfile = null;
 let pp4_completedTracks = [];
 
@@ -1961,7 +1963,7 @@ class playerStats {
             return;
         }
     
-        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * serverGap);
         const data = {
             userId: window.multiplayerClient.publicToken,
             track: `track${trackNumber}`,
@@ -1983,7 +1985,7 @@ class clippingManager {
         if (!joiningServer) return;
 
         
-        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8)
+        const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * serverGap)
         const replayCode = PP4_recordingClass.getRecording().serialize()
         const carColors = pp4_carColorDeserializer2.serialize(PP4_recordingClass.getColors());
         const time = PP4_recordingClass.getTime().numberOfFrames;
@@ -2469,11 +2471,13 @@ class PP4UI {
 
         this.CreateServerEntry(0, "top");
         this.CreateServerEntry(1, "middle");
-        this.CreateServerEntry(2, "bottom");
+        this.CreateServerEntry(2, "middle2");
+        this.CreateServerEntry(3, "middle");
+        this.CreateServerEntry(4, "bottom");
     }
     
     async CreateServerEntry(serverNumber, styleType) {
-        const trackNumber = this.getServerNumber(serverNumber * 8)
+        const trackNumber = this.getServerNumber(serverNumber * serverGap)
         
         const div = document.createElement("div");
         div.className = "entry-div";
@@ -2511,6 +2515,11 @@ class PP4UI {
         }
         else if (styleType === "middle") {
             entry.style.clipPath = "polygon(0 15%, 100% 0%, 100% 100%, 0 85%)";
+            img.style.left = "6%";
+            img.style.bottom = "18%";
+        }
+        else if (styleType === "middle2") {
+            entry.style.clipPath = "polygon(0px 0%, 100% 15%, 100% 85%, 0px 100%)";
             img.style.left = "6%";
             img.style.bottom = "18%";
         }
@@ -2929,7 +2938,7 @@ class PP4UI {
                     pp4_exitTrackCallback();
                     
                     this.serverTabs = [];
-                    const trackNumber = this.getServerNumber(this.userServerNumber * 8)
+                    const trackNumber = this.getServerNumber(this.userServerNumber * serverGap)
 
                     PP4_stats.stopTiming();
                     
@@ -2972,7 +2981,7 @@ class PP4UI {
         this.nextTrack = document.createElement("p");
         this.nextTrack.className = "next-track visible";
         this.nextTrack.style.fontSize = "20px";
-        this.nextTrack.textContent = `Next Track: ${this.trackNames[mod25(this.getServerNumber(this.userServerNumber * 8) + 1)]}`
+        this.nextTrack.textContent = `Next Track: ${this.trackNames[mod25(this.getServerNumber(this.userServerNumber * serverGap) + 1)]}`
         
         
         this.HUDtimer.appendChild(this.nextTrack)
