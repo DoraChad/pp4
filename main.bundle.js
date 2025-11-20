@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.1.0";
+const CLIENT_VERSION = "1.1.1";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -1846,10 +1846,13 @@ class PP4_ServerCommunication {
             const data = await res.json();
             
             trackFrames = {};
-            for (const [trackKey, details] of Object.entries(data.details)) {
-                const trackNum = parseInt(trackKey.replace("track", ""), 10);
-                trackFrames[trackNum] = details.frames;
-        }
+            
+            if (data.details) {
+                for (const [trackKey, details] of Object.entries(data.details)) {
+                    const trackNum = parseInt(trackKey.replace("track", ""), 10);
+                    trackFrames[trackNum] = details.frames;
+                }
+            }
         
             console.log("Track data loaded:", trackFrames);
             return trackFrames;
