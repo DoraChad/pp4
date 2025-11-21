@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.1.1";
+const CLIENT_VERSION = "1.1.2";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -2863,7 +2863,9 @@ class PP4UI {
         
         this.CreateServerEntry(0, "top");
         this.CreateServerEntry(1, "middle");
-        this.CreateServerEntry(2, "bottom");    
+        this.CreateServerEntry(2, "middle2");
+        this.CreateServerEntry(3, "middle");
+        this.CreateServerEntry(4, "bottom");  
     }
     
     getServerNumber(offset = 0, sessionLengthMinutes = 15) {
