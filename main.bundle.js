@@ -1,4 +1,4 @@
-const CLIENT_VERSION = "1.1.2";
+const CLIENT_VERSION = "1.1.3";
 const CHECK_INTERVAL = 5 * 60 * 1000;
 
 let versionCheckInterval = null;
@@ -49172,7 +49172,7 @@ new Block("5801b3268c75809728c63450d06000c5f6fcfd5d72691902f99d7d19d25e1d78",KA.
 
                                 //DORACHAD
                                 if (joiningServer) {
-                                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * 8);
+                                    const trackNumber = PP4_ui.getServerNumber(PP4_ui.userServerNumber * serverGap);
                                     const submitColors = {
                                         primary: serializeColor(carColors.primary),
                                         secondary: serializeColor(carColors.secondary),
