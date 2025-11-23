@@ -1918,8 +1918,21 @@ class PP4_ServerCommunication {
 
 
     async fetchFullLeaderboard() {  
-        try {
+        /*try {
             const response = await fetch(`${this.url}full-leaderboard`);
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            return data; // 
+        } catch (err) {
+            console.error("Failed to fetch leaderboard:", err);
+            return {};
+        }*/
+        try {
+            const response = await fetch(`https://raw.githubusercontent.com/DoraChad/pp4/refs/heads/main/final.json`);
             
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
@@ -3326,7 +3339,7 @@ const PP4_clipping = new clippingManager();
 
 PP4_ui.initInfoLogs();
 
-(async () => {
+/*(async () => {
     const result = await PP4_server.checkConnection();
 
     switch (result.status) {
@@ -3355,7 +3368,7 @@ PP4_ui.initInfoLogs();
             );
             break;
     }
-})();
+})();*/
 
 ( () => {
     var e = {
